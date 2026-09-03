@@ -11,7 +11,7 @@ import { Reveal, SectionHeading } from "./Reveal";
 
 export function ProductSection() {
   const { addItem, openCart, openCheckout } = useCart();
-  const [sizeId, setSizeId] = useState(PRODUCT.sizes[1].id);
+  const [sizeId, setSizeId] = useState(PRODUCT.sizes[1]!.id);
   const [qty, setQty] = useState(1);
 
   const size = PRODUCT.sizes.find((s) => s.id === sizeId)!;
