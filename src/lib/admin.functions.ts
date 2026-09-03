@@ -114,7 +114,32 @@ export const mutateAdminData = createServerFn({ method: "POST" })
       result = await db.from("product_variants").update({ price: data.price, mrp: data.mrp, stock: data.stock, is_active: data.active }).eq("id", data.id);
     } else if (data.action === "addReel") result = await db.from("reels").insert({ title: data.title, media_url: data.mediaUrl, caption: data.caption, is_published: data.published });
     else if (data.action === "toggleReel") result = await db.from("reels").update({ is_published: data.value }).eq("id", data.id);
-    else result = await db.from("reels").delete().eq("id", data.id);
+    else if (data.action === "deleteReel") result = await db.from("reels").delete().eq("id", data.id);
+    else if (data.action === "addProduct") {
+      const { data: created, error } = await db.from("products").insert({
+        name: data.name, short_name: data.shortName, slug: data.slug, description: data.description,
+        image_url: data.imageUrl || null, is_active: data.active,
+      }).select("id").single();
+      if (error) throw error;
+      result = await db.from("product_variants").insert(data.variants.map((variant, index) => ({
+        product_id: created.id, sku: variant.sku, label: variant.label, mrp: variant.mrp,
+        price: sellingPrice(variant.mrp, variant.discount), stock: variant.stock, sort_order: index,
+      })));
+      if (result.error) {
+        await db.from("products").delete().eq("id", created.id);
+        throw result.error;
+      }
+    } else if (data.action === "addVariant") {
+      result = await db.from("product_variants").insert({
+        product_id: data.productId, sku: data.sku, label: data.label, mrp: data.mrp,
+        price: sellingPrice(data.mrp, data.discount), stock: data.stock,
+      });
+    } else if (data.action === "deleteVariant") result = await db.from("product_variants").delete().eq("id", data.id);
+    else {
+      await db.from("product_variants").delete().eq("product_id", data.id);
+      result = await db.from("products").delete().eq("id", data.id);
+    }
+
     if (result.error) throw result.error;
     return { ok: true };
   });
