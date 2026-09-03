@@ -60,6 +60,14 @@ export const getAdminData = createServerFn({ method: "GET" })
     };
   });
 
+const variantInput = z.object({
+  label: z.string().trim().min(1).max(60),
+  sku: z.string().trim().min(2).max(40),
+  mrp: z.number().int().min(1),
+  discount: z.number().min(0).max(90),
+  stock: z.number().int().min(0),
+});
+
 export const mutationSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("orderStatus"), id: z.string().uuid(), value: z.enum(["new", "confirmed", "packed", "shipped", "delivered", "cancelled"]) }),
   z.object({ action: z.literal("reviewStatus"), id: z.string().uuid(), value: z.enum(["pending", "approved", "rejected"]) }),
@@ -69,7 +77,25 @@ export const mutationSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("addReel"), title: z.string().min(2).max(120), mediaUrl: z.string().url(), caption: z.string().max(500), published: z.boolean() }),
   z.object({ action: z.literal("toggleReel"), id: z.string().uuid(), value: z.boolean() }),
   z.object({ action: z.literal("deleteReel"), id: z.string().uuid() }),
+  z.object({
+    action: z.literal("addProduct"),
+    name: z.string().trim().min(2).max(120),
+    shortName: z.string().trim().min(1).max(60),
+    slug: z.string().trim().regex(/^[a-z0-9-]+$/, "Use lowercase letters, numbers and dashes").min(2).max(80),
+    description: z.string().trim().max(2000),
+    imageUrl: z.string().url().max(500).or(z.literal("")),
+    active: z.boolean(),
+    variants: z.array(variantInput).min(1).max(8),
+  }),
+  z.object({ action: z.literal("addVariant"), productId: z.string().uuid() }).and(variantInput),
+  z.object({ action: z.literal("deleteVariant"), id: z.string().uuid() }),
+  z.object({ action: z.literal("deleteProduct"), id: z.string().uuid() }),
 ]);
+
+function sellingPrice(mrp: number, discount: number) {
+  return Math.max(1, Math.round(mrp * (1 - discount / 100)));
+}
+
 
 export type AdminMutation = z.infer<typeof mutationSchema>;
 
