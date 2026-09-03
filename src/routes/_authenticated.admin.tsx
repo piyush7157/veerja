@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { BarChart3, Boxes, Check, ChevronRight, CircleDollarSign, Clock3, Film, Inbox, LayoutDashboard, Loader2, LogOut, Menu, MessageSquareQuote, PackageCheck, Search, ShoppingBag, Trash2, Users, X } from "lucide-react";
+import { BarChart3, Boxes, Check, ChevronRight, CircleDollarSign, Clock3, Film, Inbox, LayoutDashboard, Loader2, LogOut, Menu, MessageSquareQuote, PackageCheck, Plus, Search, ShoppingBag, Trash2, Users, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
