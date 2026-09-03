@@ -87,7 +87,7 @@ export const mutationSchema = z.discriminatedUnion("action", [
     active: z.boolean(),
     variants: z.array(variantInput).min(1).max(8),
   }),
-  z.object({ action: z.literal("addVariant"), productId: z.string().uuid() }).and(variantInput),
+  variantInput.extend({ action: z.literal("addVariant"), productId: z.string().uuid() }),
   z.object({ action: z.literal("deleteVariant"), id: z.string().uuid() }),
   z.object({ action: z.literal("deleteProduct"), id: z.string().uuid() }),
 ]);
