@@ -1,12 +1,15 @@
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { AnimatePresence, motion } from "motion/react";
-import { X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useCart } from "@/lib/cart-context";
+import { createOrder } from "@/lib/orders.functions";
 import { inr } from "@/lib/shop-data";
 
 const FIELDS = [
@@ -26,17 +29,34 @@ const FIELDS = [
 
 export function Checkout() {
   const { isCheckoutOpen, closeCheckout, items, subtotal, delivery, total, placeOrder } = useCart();
+  const createOrderFn = useServerFn(createOrder);
   const [submitting, setSubmitting] = useState(false);
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     const name = String(data.get("fullName") ?? "Customer");
     setSubmitting(true);
-    window.setTimeout(() => {
-      placeOrder(name);
+    try {
+      const result = await createOrderFn({ data: {
+        fullName: name,
+        email: String(data.get("email") ?? ""),
+        mobile: String(data.get("mobile") ?? ""),
+        address: String(data.get("address") ?? ""),
+        city: String(data.get("city") ?? ""),
+        state: String(data.get("state") ?? ""),
+        pin: String(data.get("pin") ?? ""),
+        items: items.map((item) => ({
+          productId: item.productId, name: item.name, sizeId: item.sizeId,
+          sizeLabel: item.sizeLabel, price: item.price, quantity: item.quantity,
+        })),
+      } });
+      placeOrder(name, result.orderNumber);
+    } catch (error) {
+      toast.error("We couldn't place your order", { description: error instanceof Error ? error.message : "Please try again." });
+    } finally {
       setSubmitting(false);
-    }, 600);
+    }
   };
 
   return (
@@ -145,7 +165,7 @@ export function Checkout() {
                   disabled={items.length === 0 || submitting}
                   className="mt-5 w-full bg-gradient-to-r from-gold to-gold-deep text-primary-foreground shadow-warm hover:opacity-95"
                 >
-                  {submitting ? "Placing Order…" : "Place Order"}
+                  {submitting ? <><Loader2 className="animate-spin" /> Placing Order…</> : "Place Order"}
                 </Button>
                 <p className="mt-3 text-center text-[11px] text-muted-foreground">
                   Cash on delivery & online payment options coming soon.

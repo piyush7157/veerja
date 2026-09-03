@@ -37,7 +37,7 @@ type CartContextValue = {
   closeCart: () => void;
   openCheckout: () => void;
   closeCheckout: () => void;
-  placeOrder: (customerName: string) => PlacedOrder;
+  placeOrder: (customerName: string, orderNumber?: string) => PlacedOrder;
   dismissOrder: () => void;
 };
 
@@ -97,9 +97,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setCheckoutOpen(true);
       },
       closeCheckout: () => setCheckoutOpen(false),
-      placeOrder: (customerName: string) => {
+      placeOrder: (customerName: string, confirmedOrderNumber?: string) => {
         const placed: PlacedOrder = {
-          orderNumber: `VE${Date.now().toString().slice(-8)}`,
+          orderNumber: confirmedOrderNumber ?? `VE${Date.now().toString().slice(-8)}`,
           customerName,
           total: subtotal + delivery,
           items,
