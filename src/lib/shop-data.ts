@@ -91,7 +91,6 @@ export const TESTIMONIALS = [
   {
     name: "Kabir Deshmukh",
     city: "Nagpur",
-    rading: 5,
     review:
       "Ordered the 1 litre jar for the family. Honest quality at a fair price — we finished it in three weeks!",
     rating: 5,
