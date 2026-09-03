@@ -189,3 +189,12 @@
 @utility shadow-warm-lg {
   box-shadow: 0 34px 80px -30px color-mix(in oklab, var(--gold-deep) 55%, transparent);
 }
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
