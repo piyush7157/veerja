@@ -60,6 +60,14 @@ export const getAdminData = createServerFn({ method: "GET" })
     };
   });
 
+const variantInput = z.object({
+  label: z.string().trim().min(1).max(60),
+  sku: z.string().trim().min(2).max(40),
+  mrp: z.number().int().min(1),
+  discount: z.number().min(0).max(90),
+  stock: z.number().int().min(0),
+});
+
 export const mutationSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("orderStatus"), id: z.string().uuid(), value: z.enum(["new", "confirmed", "packed", "shipped", "delivered", "cancelled"]) }),
   z.object({ action: z.literal("reviewStatus"), id: z.string().uuid(), value: z.enum(["pending", "approved", "rejected"]) }),
@@ -69,7 +77,25 @@ export const mutationSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("addReel"), title: z.string().min(2).max(120), mediaUrl: z.string().url(), caption: z.string().max(500), published: z.boolean() }),
   z.object({ action: z.literal("toggleReel"), id: z.string().uuid(), value: z.boolean() }),
   z.object({ action: z.literal("deleteReel"), id: z.string().uuid() }),
+  z.object({
+    action: z.literal("addProduct"),
+    name: z.string().trim().min(2).max(120),
+    shortName: z.string().trim().min(1).max(60),
+    slug: z.string().trim().regex(/^[a-z0-9-]+$/, "Use lowercase letters, numbers and dashes").min(2).max(80),
+    description: z.string().trim().max(2000),
+    imageUrl: z.string().url().max(500).or(z.literal("")),
+    active: z.boolean(),
+    variants: z.array(variantInput).min(1).max(8),
+  }),
+  variantInput.extend({ action: z.literal("addVariant"), productId: z.string().uuid() }),
+  z.object({ action: z.literal("deleteVariant"), id: z.string().uuid() }),
+  z.object({ action: z.literal("deleteProduct"), id: z.string().uuid() }),
 ]);
+
+function sellingPrice(mrp: number, discount: number) {
+  return Math.max(1, Math.round(mrp * (1 - discount / 100)));
+}
+
 
 export type AdminMutation = z.infer<typeof mutationSchema>;
 
@@ -88,7 +114,32 @@ export const mutateAdminData = createServerFn({ method: "POST" })
       result = await db.from("product_variants").update({ price: data.price, mrp: data.mrp, stock: data.stock, is_active: data.active }).eq("id", data.id);
     } else if (data.action === "addReel") result = await db.from("reels").insert({ title: data.title, media_url: data.mediaUrl, caption: data.caption, is_published: data.published });
     else if (data.action === "toggleReel") result = await db.from("reels").update({ is_published: data.value }).eq("id", data.id);
-    else result = await db.from("reels").delete().eq("id", data.id);
+    else if (data.action === "deleteReel") result = await db.from("reels").delete().eq("id", data.id);
+    else if (data.action === "addProduct") {
+      const { data: created, error } = await db.from("products").insert({
+        name: data.name, short_name: data.shortName, slug: data.slug, description: data.description,
+        image_url: data.imageUrl || null, is_active: data.active,
+      }).select("id").single();
+      if (error) throw error;
+      result = await db.from("product_variants").insert(data.variants.map((variant, index) => ({
+        product_id: created.id, sku: variant.sku, label: variant.label, mrp: variant.mrp,
+        price: sellingPrice(variant.mrp, variant.discount), stock: variant.stock, sort_order: index,
+      })));
+      if (result.error) {
+        await db.from("products").delete().eq("id", created.id);
+        throw result.error;
+      }
+    } else if (data.action === "addVariant") {
+      result = await db.from("product_variants").insert({
+        product_id: data.productId, sku: data.sku, label: data.label, mrp: data.mrp,
+        price: sellingPrice(data.mrp, data.discount), stock: data.stock,
+      });
+    } else if (data.action === "deleteVariant") result = await db.from("product_variants").delete().eq("id", data.id);
+    else {
+      await db.from("product_variants").delete().eq("product_id", data.id);
+      result = await db.from("products").delete().eq("id", data.id);
+    }
+
     if (result.error) throw result.error;
     return { ok: true };
   });
