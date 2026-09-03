@@ -82,5 +82,118 @@ function SectionTitle({ title, subtitle, search, setSearch }: { title: string; s
 function Status({ value }: { value: string }) { const good = ["approved", "delivered", "resolved", "published"].includes(value); const pending = ["new", "pending", "unread"].includes(value); return <span className={cn("inline-flex rounded-full px-2 py-1 text-[10px] font-semibold uppercase", good ? "bg-leaf/12 text-leaf" : pending ? "bg-gold/20 text-gold-deep" : "bg-secondary text-muted-foreground")}>{value}</span>; }
 function Empty({ show, label }: { show: boolean; label: string }) { return show ? <div className="py-14 text-center text-sm text-muted-foreground">{label}</div> : null; }
 function OrdersTable({ orders, mutate, busy }: { orders: AdminData["orders"]; mutate: (data: MutationPayload) => void; busy: boolean }) { return <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead className="border-b border-border text-xs uppercase text-muted-foreground"><tr><th className="py-3">Order</th><th>Customer</th><th>Items</th><th>Date</th><th>Total</th><th>Status</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id} className="border-b border-border/60"><td className="py-4 font-semibold text-brown">#{order.order_number}</td><td><p>{order.customers?.full_name}</p><p className="text-xs text-muted-foreground">{order.customers?.mobile}</p></td><td>{order.order_items.reduce((sum, item) => sum + item.quantity, 0)}</td><td>{new Date(order.created_at).toLocaleDateString("en-IN")}</td><td className="font-semibold">{inr(order.total)}</td><td><Select disabled={busy} value={order.status} onValueChange={(value: "new" | "confirmed" | "packed" | "shipped" | "delivered" | "cancelled") => mutate({ action: "orderStatus", id: order.id, value })}><SelectTrigger className="w-36"><SelectValue /></SelectTrigger><SelectContent>{["new", "confirmed", "packed", "shipped", "delivered", "cancelled"].map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent></Select></td></tr>)}</tbody></table><Empty show={!orders.length} label="No orders found" /></div>; }
-function VariantEditor({ variant, mutate, busy }: { variant: AdminData["products"][number]["product_variants"][number]; mutate: (data: MutationPayload) => void; busy: boolean }) { const [price, setPrice] = useState(String(variant.price)); const [mrp, setMrp] = useState(String(variant.mrp)); const [stock, setStock] = useState(String(variant.stock)); return <div className="border border-border bg-background p-4"><div className="flex justify-between"><strong className="text-brown">{variant.label}</strong><Status value={variant.is_active ? "active" : "hidden"} /></div><div className="mt-4 grid grid-cols-3 gap-2"><div><Label className="text-xs">Price</Label><Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} /></div><div><Label className="text-xs">MRP</Label><Input type="number" value={mrp} onChange={(e) => setMrp(e.target.value)} /></div><div><Label className="text-xs">Stock</Label><Input type="number" value={stock} onChange={(e) => setStock(e.target.value)} /></div></div><Button size="sm" disabled={busy} onClick={() => mutate({ action: "updateVariant", id: variant.id, price: Number(price), mrp: Number(mrp), stock: Number(stock), active: variant.is_active })} className="mt-3 w-full">Save variant</Button></div>; }
+type VariantDraft = { label: string; sku: string; mrp: string; discount: string; stock: string };
+const emptyVariant: VariantDraft = { label: "", sku: "", mrp: "", discount: "0", stock: "0" };
+const discountOf = (mrp: number, price: number) => (mrp > 0 ? Math.max(0, Math.round(((mrp - price) / mrp) * 100)) : 0);
+
+function ProductsPanel({ products, mutate, busy }: { products: AdminData["products"]; mutate: (data: MutationPayload) => void; busy: boolean }) {
+  const [showForm, setShowForm] = useState(false);
+  return <div className="space-y-5">
+    <div className="flex flex-wrap items-end justify-between gap-4">
+      <SectionTitle title="Products & inventory" subtitle="Add products, set pack pricing, discounts, and stock" />
+      <Button onClick={() => setShowForm((open) => !open)} className="bg-brown text-primary-foreground hover:bg-brown/90">{showForm ? <X /> : <Plus />}{showForm ? "Close form" : "Add product"}</Button>
+    </div>
+    {showForm && <AddProductForm busy={busy} mutate={mutate} onDone={() => setShowForm(false)} />}
+    {products.map((product) => <section key={product.id} className="bg-card p-5 shadow-warm">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div><h2 className="font-display text-2xl font-semibold text-brown">{product.name}</h2><p className="text-xs text-muted-foreground">/{product.slug}</p><p className="mt-1 max-w-2xl text-sm text-muted-foreground">{product.description}</p></div>
+        <div className="flex items-center gap-2">
+          <Button variant={product.is_active ? "outline" : "default"} onClick={() => mutate({ action: "toggleProduct", id: product.id, value: !product.is_active })}>{product.is_active ? "Active on store" : "Hidden"}</Button>
+          <Button size="icon" variant="ghost" aria-label="Delete product" disabled={busy} onClick={() => { if (confirm(`Delete ${product.name} and all its pack sizes?`)) mutate({ action: "deleteProduct", id: product.id }); }}><Trash2 /></Button>
+        </div>
+      </div>
+      <div className="mt-5 grid gap-3 lg:grid-cols-3">
+        {product.product_variants.map((variant) => <VariantEditor key={variant.id} variant={variant} mutate={mutate} busy={busy} />)}
+        <AddVariantForm productId={product.id} mutate={mutate} busy={busy} />
+      </div>
+    </section>)}
+    <Empty show={!products.length} label="No products yet — add your first product above" />
+  </div>;
+}
+
+function VariantFields({ value, onChange, idPrefix }: { value: VariantDraft; onChange: (next: VariantDraft) => void; idPrefix: string }) {
+  const mrp = Number(value.mrp) || 0; const discount = Number(value.discount) || 0;
+  const price = Math.max(0, Math.round(mrp * (1 - discount / 100)));
+  return <div className="grid gap-3 sm:grid-cols-2">
+    <div><Label htmlFor={`${idPrefix}-label`} className="text-xs">Pack size / label</Label><Input id={`${idPrefix}-label`} value={value.label} placeholder="500 ml" onChange={(e) => onChange({ ...value, label: e.target.value })} required /></div>
+    <div><Label htmlFor={`${idPrefix}-sku`} className="text-xs">SKU</Label><Input id={`${idPrefix}-sku`} value={value.sku} placeholder="VE-A2-500" onChange={(e) => onChange({ ...value, sku: e.target.value })} required /></div>
+    <div><Label htmlFor={`${idPrefix}-mrp`} className="text-xs">MRP (₹)</Label><Input id={`${idPrefix}-mrp`} type="number" min={1} value={value.mrp} onChange={(e) => onChange({ ...value, mrp: e.target.value })} required /></div>
+    <div><Label htmlFor={`${idPrefix}-discount`} className="text-xs">Discount (%)</Label><Input id={`${idPrefix}-discount`} type="number" min={0} max={90} value={value.discount} onChange={(e) => onChange({ ...value, discount: e.target.value })} /></div>
+    <div><Label htmlFor={`${idPrefix}-stock`} className="text-xs">Stock</Label><Input id={`${idPrefix}-stock`} type="number" min={0} value={value.stock} onChange={(e) => onChange({ ...value, stock: e.target.value })} /></div>
+    <div className="flex items-end"><p className="text-sm text-muted-foreground">Selling price <strong className="text-brown">{inr(price)}</strong>{discount > 0 && <span className="ml-1 text-gold-deep">({discount}% off)</span>}</p></div>
+  </div>;
+}
+
+function AddProductForm({ mutate, busy, onDone }: { mutate: (data: MutationPayload) => void; busy: boolean; onDone: () => void }) {
+  const [name, setName] = useState(""); const [shortName, setShortName] = useState(""); const [slug, setSlug] = useState("");
+  const [description, setDescription] = useState(""); const [imageUrl, setImageUrl] = useState(""); const [active, setActive] = useState(true);
+  const [variants, setVariants] = useState<VariantDraft[]>([{ ...emptyVariant }]);
+  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    mutate({
+      action: "addProduct", name: name.trim(), shortName: (shortName || name).trim(),
+      slug: (slug || name).trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+      description: description.trim(), imageUrl: imageUrl.trim(), active,
+      variants: variants.map((variant) => ({ label: variant.label.trim(), sku: variant.sku.trim(), mrp: Number(variant.mrp) || 0, discount: Number(variant.discount) || 0, stock: Number(variant.stock) || 0 })),
+    });
+    onDone();
+  };
+  return <form onSubmit={submit} className="bg-card p-5 shadow-warm">
+    <SectionTitle title="New product" subtitle="Fill in the product details and at least one pack size" />
+    <div className="mt-5 grid gap-4 lg:grid-cols-2">
+      <div><Label htmlFor="p-name">Product name</Label><Input id="p-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Veerja A2 Bilona Ghee" required minLength={2} /></div>
+      <div><Label htmlFor="p-short">Short name</Label><Input id="p-short" value={shortName} onChange={(e) => setShortName(e.target.value)} placeholder="A2 Ghee" /></div>
+      <div><Label htmlFor="p-slug">URL slug</Label><Input id="p-slug" value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="veerja-a2-ghee" /><p className="mt-1 text-xs text-muted-foreground">Leave blank to generate from the name.</p></div>
+      <div><Label htmlFor="p-image">Image URL</Label><Input id="p-image" type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." /></div>
+      <div className="lg:col-span-2"><Label htmlFor="p-desc">Description</Label><Textarea id="p-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} placeholder="Hand-churned in small batches..." /></div>
+    </div>
+    <div className="mt-6 space-y-4">
+      {variants.map((variant, index) => <div key={index} className="border border-border bg-background p-4">
+        <div className="mb-3 flex items-center justify-between"><strong className="text-sm text-brown">Pack size {index + 1}</strong>{variants.length > 1 && <Button type="button" size="icon" variant="ghost" aria-label="Remove pack size" onClick={() => setVariants(variants.filter((_, i) => i !== index))}><Trash2 /></Button>}</div>
+        <VariantFields idPrefix={`new-${index}`} value={variant} onChange={(next) => setVariants(variants.map((item, i) => (i === index ? next : item)))} />
+      </div>)}
+      <Button type="button" variant="outline" onClick={() => setVariants([...variants, { ...emptyVariant }])}><Plus /> Add another pack size</Button>
+    </div>
+    <div className="mt-6 flex flex-wrap items-center gap-4">
+      <label className="flex items-center gap-2 text-sm text-foreground"><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /> Publish on storefront</label>
+      <Button type="submit" disabled={busy} className="bg-brown text-primary-foreground hover:bg-brown/90">{busy ? <Loader2 className="animate-spin" /> : <Check />}Create product</Button>
+    </div>
+  </form>;
+}
+
+function AddVariantForm({ productId, mutate, busy }: { productId: string; mutate: (data: MutationPayload) => void; busy: boolean }) {
+  const [open, setOpen] = useState(false); const [draft, setDraft] = useState<VariantDraft>({ ...emptyVariant });
+  if (!open) return <button type="button" onClick={() => setOpen(true)} className="grid min-h-[140px] place-items-center border border-dashed border-border bg-background p-4 text-sm font-medium text-gold-deep hover:bg-beige/40"><span className="flex items-center gap-2"><Plus className="h-4 w-4" /> Add pack size</span></button>;
+  return <div className="border border-border bg-background p-4">
+    <VariantFields idPrefix={`v-${productId}`} value={draft} onChange={setDraft} />
+    <div className="mt-3 flex gap-2">
+      <Button size="sm" disabled={busy} onClick={() => { mutate({ action: "addVariant", productId, label: draft.label.trim(), sku: draft.sku.trim(), mrp: Number(draft.mrp) || 0, discount: Number(draft.discount) || 0, stock: Number(draft.stock) || 0 }); setDraft({ ...emptyVariant }); setOpen(false); }}>Save pack size</Button>
+      <Button size="sm" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+    </div>
+  </div>;
+}
+
+function VariantEditor({ variant, mutate, busy }: { variant: AdminData["products"][number]["product_variants"][number]; mutate: (data: MutationPayload) => void; busy: boolean }) {
+  const [mrp, setMrp] = useState(String(variant.mrp));
+  const [discount, setDiscount] = useState(String(discountOf(variant.mrp, variant.price)));
+  const [stock, setStock] = useState(String(variant.stock));
+  const price = Math.max(0, Math.round((Number(mrp) || 0) * (1 - (Number(discount) || 0) / 100)));
+  return <div className="border border-border bg-background p-4">
+    <div className="flex items-center justify-between gap-2">
+      <div><strong className="text-brown">{variant.label}</strong><p className="text-xs text-muted-foreground">{variant.sku}</p></div>
+      <div className="flex items-center gap-1"><Status value={variant.is_active ? "active" : "hidden"} /><Button size="icon" variant="ghost" aria-label="Delete pack size" disabled={busy} onClick={() => { if (confirm(`Delete pack size ${variant.label}?`)) mutate({ action: "deleteVariant", id: variant.id }); }}><Trash2 /></Button></div>
+    </div>
+    <div className="mt-4 grid grid-cols-3 gap-2">
+      <div><Label className="text-xs">MRP</Label><Input type="number" value={mrp} onChange={(e) => setMrp(e.target.value)} /></div>
+      <div><Label className="text-xs">Discount %</Label><Input type="number" min={0} max={90} value={discount} onChange={(e) => setDiscount(e.target.value)} /></div>
+      <div><Label className="text-xs">Stock</Label><Input type="number" value={stock} onChange={(e) => setStock(e.target.value)} /></div>
+    </div>
+    <p className="mt-2 text-xs text-muted-foreground">Sells at <strong className="text-brown">{inr(price)}</strong></p>
+    <div className="mt-3 flex gap-2">
+      <Button size="sm" disabled={busy} onClick={() => mutate({ action: "updateVariant", id: variant.id, price, mrp: Number(mrp) || 0, stock: Number(stock) || 0, active: variant.is_active })} className="flex-1">Save</Button>
+      <Button size="sm" variant="outline" disabled={busy} onClick={() => mutate({ action: "updateVariant", id: variant.id, price, mrp: Number(mrp) || 0, stock: Number(stock) || 0, active: !variant.is_active })}>{variant.is_active ? "Hide" : "Show"}</Button>
+    </div>
+  </div>;
+}
+
 function ReelsPanel({ reels, mutate, busy }: { reels: AdminData["reels"]; mutate: (data: MutationPayload) => void; busy: boolean }) { const submit = (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); const form = new FormData(event.currentTarget); mutate({ action: "addReel", title: String(form.get("title")), mediaUrl: String(form.get("mediaUrl")), caption: String(form.get("caption")), published: form.get("published") === "on" }); event.currentTarget.reset(); }; return <div className="grid gap-5 xl:grid-cols-[380px_1fr]"><form onSubmit={submit} className="bg-card p-5 shadow-warm"><SectionTitle title="Add reel" subtitle="Publish short-form brand content" /><div className="mt-5 space-y-4"><div><Label htmlFor="reel-title">Title</Label><Input id="reel-title" name="title" required minLength={2} /></div><div><Label htmlFor="media-url">Media URL</Label><Input id="media-url" name="mediaUrl" type="url" required /></div><div><Label htmlFor="caption">Caption</Label><Textarea id="caption" name="caption" /></div><label className="flex items-center gap-2 text-sm"><input type="checkbox" name="published" /> Publish now</label><Button type="submit" disabled={busy} className="w-full">Add reel</Button></div></form><section className="bg-card p-5 shadow-warm"><SectionTitle title="Reel library" subtitle="Manage visibility and remove old content" /><div className="mt-5 space-y-3">{reels.map((reel) => <div key={reel.id} className="flex items-center gap-3 border-b border-border p-3"><Film className="text-gold-deep" /><div className="min-w-0 flex-1"><p className="truncate font-medium text-brown">{reel.title}</p><p className="truncate text-xs text-muted-foreground">{reel.media_url}</p></div><Button size="sm" variant="outline" onClick={() => mutate({ action: "toggleReel", id: reel.id, value: !reel.is_published })}>{reel.is_published ? "Published" : "Draft"}</Button><Button size="icon" variant="ghost" aria-label="Delete reel" onClick={() => mutate({ action: "deleteReel", id: reel.id })}><Trash2 /></Button></div>)}<Empty show={!reels.length} label="No reels added" /></div></section></div>; }
