@@ -60,7 +60,7 @@ export const getAdminData = createServerFn({ method: "GET" })
     };
   });
 
-const mutationSchema = z.discriminatedUnion("action", [
+export const mutationSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("orderStatus"), id: z.string().uuid(), value: z.enum(["new", "confirmed", "packed", "shipped", "delivered", "cancelled"]) }),
   z.object({ action: z.literal("reviewStatus"), id: z.string().uuid(), value: z.enum(["pending", "approved", "rejected"]) }),
   z.object({ action: z.literal("messageStatus"), id: z.string().uuid(), value: z.enum(["unread", "read", "resolved"]) }),
@@ -70,6 +70,8 @@ const mutationSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("toggleReel"), id: z.string().uuid(), value: z.boolean() }),
   z.object({ action: z.literal("deleteReel"), id: z.string().uuid() }),
 ]);
+
+export type AdminMutation = z.infer<typeof mutationSchema>;
 
 export const mutateAdminData = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

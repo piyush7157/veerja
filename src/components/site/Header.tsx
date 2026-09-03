@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Menu, ShoppingBag, X } from "lucide-react";
+import { LockKeyhole, Menu, ShoppingBag, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 import { Button } from "@/components/ui/button";
@@ -65,6 +65,9 @@ export function Header() {
         </nav>
 
         <div className="flex shrink-0 items-center gap-1.5">
+          <Button asChild size="icon" variant="ghost" className="hidden text-brown sm:inline-flex" title="Admin sign in">
+            <a href="/auth" aria-label="Admin sign in"><LockKeyhole className="h-4 w-4" /></a>
+          </Button>
           <button
             onClick={openCart}
             aria-label={`Open cart, ${count} items`}

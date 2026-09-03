@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/sonner";
-import { getAdminData, getAdminState, claimInitialAdmin, mutateAdminData } from "@/lib/admin.functions";
+import { getAdminData, getAdminState, claimInitialAdmin, mutateAdminData, type AdminMutation } from "@/lib/admin.functions";
 import { inr } from "@/lib/shop-data";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -38,7 +38,7 @@ function AdminPage() {
   const [section, setSection] = useState<Section>("dashboard"); const [mobileNav, setMobileNav] = useState(false); const [search, setSearch] = useState("");
   const state = useQuery({ queryKey: ["admin-state"], queryFn: () => stateFn() });
   const data = useQuery({ queryKey: ["admin-data"], queryFn: () => dataFn(), enabled: state.data?.isAdmin === true });
-  const mutation = useMutation({ mutationFn: (payload: Parameters<typeof mutateFn>[0]["data"]) => mutateFn({ data: payload }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-data"] }); toast.success("Changes saved"); }, onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save changes") });
+  const mutation = useMutation({ mutationFn: (payload: AdminMutation) => mutateFn({ data: payload }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-data"] }); toast.success("Changes saved"); }, onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save changes") });
   const title = NAV.find((item) => item.id === section)?.label ?? "Dashboard";
   const logout = async () => { await queryClient.cancelQueries(); queryClient.clear(); await supabase.auth.signOut(); await navigate({ to: "/auth", replace: true }); };
   if (state.isLoading) return <LoadingScreen />;
@@ -65,7 +65,7 @@ function AccessSetup({ canClaim, onClaim, onLogout }: { canClaim: boolean; onCla
 }
 
 type AdminData = Awaited<ReturnType<typeof getAdminData>>;
-type MutationPayload = Parameters<ReturnType<typeof useServerFn<typeof mutateAdminData>>>[0]["data"];
+type MutationPayload = AdminMutation;
 function AdminContent({ section, data, search, setSearch, mutate, busy }: { section: Section; data: AdminData; search: string; setSearch: (value: string) => void; mutate: (data: MutationPayload) => void; busy: boolean }) {
   const orders = data.orders; const revenue = orders.filter((o) => o.status !== "cancelled").reduce((sum, o) => sum + o.total, 0);
   if (section === "dashboard") return <><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric icon={CircleDollarSign} label="Revenue" value={inr(revenue)} note="Non-cancelled orders" /><Metric icon={ShoppingBag} label="Orders" value={String(orders.length)} note={`${orders.filter((o) => o.status === "new").length} awaiting action`} /><Metric icon={Users} label="Customers" value={String(data.customers.length)} note="All-time customers" /><Metric icon={Inbox} label="Unread messages" value={String(data.messages.filter((m) => m.status === "unread").length)} note={`${data.reviews.filter((r) => r.status === "pending").length} reviews pending`} /></div><section className="mt-6 bg-card p-5 shadow-warm"><SectionTitle title="Recent orders" subtitle="Latest purchases across the store" /><OrdersTable orders={orders.slice(0, 6)} mutate={mutate} busy={busy} /></section></>;
