@@ -198,3 +198,11 @@
     transform: translateX(-50%);
   }
 }
+
+/* Hide the injected "Edit with Lovable" badge on published deployments */
+#lovable-badge,
+[id^="lovable-badge"],
+a[href*="lovable.dev/projects"],
+a[href*="lovable.app/?utm"] {
+  display: none !important;
+}
