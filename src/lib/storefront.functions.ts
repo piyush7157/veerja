@@ -56,3 +56,19 @@ export const getStorefrontProducts = createServerFn({ method: "GET" }).handler(a
     return [];
   }
 });
+
+export const getSiteSettings = createServerFn({ method: "GET" }).handler(async () => {
+  try {
+    const { data, error } = await publicClient()
+      .from("site_settings")
+      .select("logo_url")
+      .order("created_at")
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return { logoUrl: data?.logo_url ?? null };
+  } catch (error) {
+    console.error("[Site settings]", error);
+    return { logoUrl: null };
+  }
+});
