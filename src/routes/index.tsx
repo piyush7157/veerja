@@ -19,7 +19,7 @@ import { Footer } from "@/components/site/Footer";
 import { CartDrawer } from "@/components/site/CartDrawer";
 import { Checkout } from "@/components/site/Checkout";
 import { OrderSuccess } from "@/components/site/OrderSuccess";
-import { getApprovedReviews, getStorefrontProducts } from "@/lib/storefront.functions";
+import { getApprovedReviews, getStorefrontProducts, getSiteSettings } from "@/lib/storefront.functions";
 
 const TITLE = "Veerja Eats | Premium A2 Cow Ghee, Bilona Churned";
 const DESCRIPTION =
@@ -34,6 +34,12 @@ const productsQuery = queryOptions({
   queryKey: ["storefront-products"],
   queryFn: () => getStorefrontProducts(),
 });
+
+const settingsQuery = queryOptions({
+  queryKey: ["storefront-settings"],
+  queryFn: () => getSiteSettings(),
+});
+
 
 export const Route = createFileRoute("/")({
   loader: async ({ context }) => {
