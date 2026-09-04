@@ -162,10 +162,16 @@ export const mutateAdminData = createServerFn({ method: "POST" })
         price: sellingPrice(data.mrp, data.discount), stock: data.stock,
       });
     } else if (data.action === "deleteVariant") result = await db.from("product_variants").delete().eq("id", data.id);
-    else {
+    else if (data.action === "updateLogo") {
+      const { data: existing } = await db.from("site_settings").select("id").order("created_at").limit(1).maybeSingle();
+      result = existing
+        ? await db.from("site_settings").update({ logo_url: data.logoUrl || null }).eq("id", existing.id)
+        : await db.from("site_settings").insert({ logo_url: data.logoUrl || null });
+    } else {
       await db.from("product_variants").delete().eq("product_id", data.id);
       result = await db.from("products").delete().eq("id", data.id);
     }
+
 
     if (result.error) throw result.error;
     return { ok: true };
