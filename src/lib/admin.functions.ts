@@ -44,21 +44,24 @@ export const getAdminData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const db = await getAdminClientFor(context.userId);
-    const [orders, products, customers, reviews, reels, messages] = await Promise.all([
+    const [orders, products, customers, reviews, reels, messages, settings] = await Promise.all([
       db.from("orders").select("*, customers(*), order_items(*)").order("created_at", { ascending: false }),
       db.from("products").select("*, product_variants(*)").order("created_at"),
       db.from("customers").select("*, orders(id,total,status,created_at)").order("created_at", { ascending: false }),
       db.from("reviews").select("*").order("created_at", { ascending: false }),
       db.from("reels").select("*").order("sort_order"),
       db.from("customer_messages").select("*").order("created_at", { ascending: false }),
+      db.from("site_settings").select("id,logo_url").order("created_at").limit(1).maybeSingle(),
     ]);
     const failed = [orders, products, customers, reviews, reels, messages].find((result) => result.error);
     if (failed?.error) throw failed.error;
     return {
       orders: orders.data ?? [], products: products.data ?? [], customers: customers.data ?? [],
       reviews: reviews.data ?? [], reels: reels.data ?? [], messages: messages.data ?? [],
+      settings: settings.data ?? null,
     };
   });
+
 
 const variantInput = z.object({
   label: z.string().trim().min(1).max(60),
