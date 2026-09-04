@@ -143,6 +143,11 @@ export const mutateAdminData = createServerFn({ method: "POST" })
         await db.from("products").delete().eq("id", created.id);
         throw result.error;
       }
+    } else if (data.action === "editProduct") {
+      result = await db.from("products").update({
+        name: data.name, short_name: data.shortName, slug: data.slug, description: data.description,
+        image_url: data.imageUrl || null, is_active: data.active,
+      }).eq("id", data.id);
     } else if (data.action === "addVariant") {
       result = await db.from("product_variants").insert({
         product_id: data.productId, sku: data.sku, label: data.label, mrp: data.mrp,
