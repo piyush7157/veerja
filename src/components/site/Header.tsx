@@ -16,8 +16,9 @@ const LINKS = [
   { label: "Contact", href: "#contact" },
 ];
 
-export function Header() {
+export function Header({ logoUrl }: { logoUrl?: string | null }) {
   const { count, openCart } = useCart();
+
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
