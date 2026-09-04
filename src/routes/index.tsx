@@ -66,10 +66,12 @@ export const Route = createFileRoute("/")({
 function Index() {
   const { data: reviews } = useSuspenseQuery(reviewsQuery);
   const { data: products } = useSuspenseQuery(productsQuery);
+  const { data: settings } = useSuspenseQuery(settingsQuery);
   return (
     <CartProvider>
       <div className="min-h-screen overflow-x-hidden bg-background">
-        <Header />
+        <Header logoUrl={settings.logoUrl} />
+
         <main>
           <Hero />
           <Benefits />
