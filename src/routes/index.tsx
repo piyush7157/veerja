@@ -84,7 +84,7 @@ function Index() {
           <FinalCta />
           <ContactSection />
         </main>
-        <Footer />
+        <Footer logoUrl={settings.logoUrl} />
         <CartDrawer />
         <Checkout />
         <OrderSuccess />
