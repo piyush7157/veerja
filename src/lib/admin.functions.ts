@@ -105,7 +105,12 @@ export const mutationSchema = z.discriminatedUnion("action", [
   variantInput.extend({ action: z.literal("addVariant"), productId: z.string().uuid() }),
   z.object({ action: z.literal("deleteVariant"), id: z.string().uuid() }),
   z.object({ action: z.literal("deleteProduct"), id: z.string().uuid() }),
+  z.object({
+    action: z.literal("updateLogo"),
+    logoUrl: z.string().max(500).refine((value) => value === "" || value.startsWith("/api/public/site-image?path="), "Upload a logo image"),
+  }),
 ]);
+
 
 function sellingPrice(mrp: number, discount: number) {
   return Math.max(1, Math.round(mrp * (1 - discount / 100)));
