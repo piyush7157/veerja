@@ -89,6 +89,16 @@ export const mutationSchema = z.discriminatedUnion("action", [
     active: z.boolean(),
     variants: z.array(variantInput).min(1).max(8),
   }),
+  z.object({
+    action: z.literal("editProduct"),
+    id: z.string().uuid(),
+    name: z.string().trim().min(2).max(120),
+    shortName: z.string().trim().min(1).max(60),
+    slug: z.string().trim().regex(/^[a-z0-9-]+$/, "Use lowercase letters, numbers and dashes").min(2).max(80),
+    description: z.string().trim().max(2000),
+    imageUrl: z.string().max(500).refine((value) => value === "" || value.startsWith("/api/public/product-image?path="), "Upload a product image"),
+    active: z.boolean(),
+  }),
   variantInput.extend({ action: z.literal("addVariant"), productId: z.string().uuid() }),
   z.object({ action: z.literal("deleteVariant"), id: z.string().uuid() }),
   z.object({ action: z.literal("deleteProduct"), id: z.string().uuid() }),
@@ -133,6 +143,11 @@ export const mutateAdminData = createServerFn({ method: "POST" })
         await db.from("products").delete().eq("id", created.id);
         throw result.error;
       }
+    } else if (data.action === "editProduct") {
+      result = await db.from("products").update({
+        name: data.name, short_name: data.shortName, slug: data.slug, description: data.description,
+        image_url: data.imageUrl || null, is_active: data.active,
+      }).eq("id", data.id);
     } else if (data.action === "addVariant") {
       result = await db.from("product_variants").insert({
         product_id: data.productId, sku: data.sku, label: data.label, mrp: data.mrp,

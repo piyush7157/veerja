@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { BarChart3, Boxes, Check, ChevronRight, CircleDollarSign, Clock3, Film, ImagePlus, Inbox, LayoutDashboard, Loader2, LogOut, Menu, MessageSquareQuote, PackageCheck, Plus, Save, Search, ShoppingBag, Trash2, Upload, Users, X } from "lucide-react";
+import { BarChart3, Boxes, Check, ChevronRight, CircleDollarSign, Clock3, Film, ImagePlus, Inbox, LayoutDashboard, Loader2, LogOut, Menu, MessageSquareQuote, PackageCheck, Pencil, Plus, Save, Search, ShoppingBag, Trash2, Upload, Users, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -107,21 +107,86 @@ function ProductsPanel({ products, mutate, busy }: { products: AdminData["produc
       <Button onClick={() => setShowForm((open) => !open)} className="bg-gold text-brown shadow-warm hover:bg-gold-deep hover:text-cream">{showForm ? <X /> : <Plus />}{showForm ? "Close form" : "Add product"}</Button>
     </div>
     {showForm && <AddProductForm busy={busy} mutate={mutate} onDone={() => setShowForm(false)} />}
-    {products.map((product) => <section key={product.id} className="bg-card p-5 shadow-warm">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div><h2 className="font-display text-2xl font-semibold text-brown">{product.name}</h2><p className="text-xs text-muted-foreground">/{product.slug}</p><p className="mt-1 max-w-2xl text-sm text-muted-foreground">{product.description}</p></div>
-        <div className="flex items-center gap-2">
-          <Button variant={product.is_active ? "outline" : "default"} onClick={() => mutate({ action: "toggleProduct", id: product.id, value: !product.is_active })}>{product.is_active ? "Active on store" : "Hidden"}</Button>
-          <Button size="icon" variant="ghost" aria-label="Delete product" disabled={busy} onClick={() => { if (confirm(`Delete ${product.name} and all its pack sizes?`)) mutate({ action: "deleteProduct", id: product.id }); }}><Trash2 /></Button>
-        </div>
-      </div>
-      <div className="mt-5 grid gap-3 lg:grid-cols-3">
-        {product.product_variants.map((variant) => <VariantEditor key={variant.id} variant={variant} mutate={mutate} busy={busy} />)}
-        <AddVariantForm productId={product.id} mutate={mutate} busy={busy} />
-      </div>
-    </section>)}
+    {products.map((product) => <ProductCard key={product.id} product={product} mutate={mutate} busy={busy} />)}
     <Empty show={!products.length} label="No products yet — add your first product above" />
   </div>;
+}
+
+async function uploadProductImage(file: File) {
+  if (!file.type.startsWith("image/")) { toast.error("Choose a JPG, PNG, or WebP image"); return null; }
+  if (file.size > 5 * 1024 * 1024) { toast.error("Image must be smaller than 5 MB"); return null; }
+  const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const path = `${crypto.randomUUID()}.${extension}`;
+  const { error } = await supabase.storage.from("product-images").upload(path, file, { contentType: file.type, upsert: false });
+  if (error) { toast.error("Image upload failed", { description: error.message }); return null; }
+  toast.success("Product image uploaded");
+  return `/api/public/product-image?path=${encodeURIComponent(path)}`;
+}
+
+function ProductCard({ product, mutate, busy }: { product: AdminData["products"][number]; mutate: (data: MutationPayload) => void; busy: boolean }) {
+  const [editing, setEditing] = useState(false);
+  return <section className="bg-card p-5 shadow-warm">
+    <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex min-w-0 gap-4">
+        {product.image_url && <img src={product.image_url} alt={product.name} className="h-20 w-20 shrink-0 object-cover" />}
+        <div><h2 className="font-display text-2xl font-semibold text-brown">{product.name}</h2><p className="text-xs text-muted-foreground">/{product.slug}</p><p className="mt-1 max-w-2xl text-sm text-muted-foreground">{product.description}</p></div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" onClick={() => setEditing((open) => !open)} className="border-gold-deep/40 text-brown hover:bg-gold/10">{editing ? <X /> : <Pencil />}{editing ? "Close" : "Edit"}</Button>
+        <Button variant={product.is_active ? "outline" : "default"} onClick={() => mutate({ action: "toggleProduct", id: product.id, value: !product.is_active })}>{product.is_active ? "Active on store" : "Hidden"}</Button>
+        <Button size="icon" variant="ghost" aria-label="Delete product" disabled={busy} onClick={() => { if (confirm(`Delete ${product.name} and all its pack sizes?`)) mutate({ action: "deleteProduct", id: product.id }); }}><Trash2 /></Button>
+      </div>
+    </div>
+    {editing && <EditProductForm product={product} busy={busy} mutate={mutate} onDone={() => setEditing(false)} />}
+    <div className="mt-5 grid gap-3 lg:grid-cols-3">
+      {product.product_variants.map((variant) => <VariantEditor key={variant.id} variant={variant} mutate={mutate} busy={busy} />)}
+      <AddVariantForm productId={product.id} mutate={mutate} busy={busy} />
+    </div>
+  </section>;
+}
+
+function EditProductForm({ product, mutate, busy, onDone }: { product: AdminData["products"][number]; mutate: (data: MutationPayload) => void; busy: boolean; onDone: () => void }) {
+  const [name, setName] = useState(product.name); const [shortName, setShortName] = useState(product.short_name);
+  const [slug, setSlug] = useState(product.slug); const [description, setDescription] = useState(product.description);
+  const [imageUrl, setImageUrl] = useState(product.image_url ?? ""); const [preview, setPreview] = useState(product.image_url ?? "");
+  const [uploading, setUploading] = useState(false); const [active, setActive] = useState(product.is_active);
+  const pick = async (file: File) => {
+    setUploading(true); setPreview(URL.createObjectURL(file));
+    const url = await uploadProductImage(file);
+    setUploading(false);
+    if (url) setImageUrl(url); else setPreview(product.image_url ?? "");
+  };
+  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    mutate({
+      action: "editProduct", id: product.id, name: name.trim(), shortName: (shortName || name).trim(),
+      slug: slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+      description: description.trim(), imageUrl: imageUrl.trim(), active,
+    });
+    onDone();
+  };
+  const inputId = `edit-${product.id}`;
+  return <form onSubmit={submit} className="mt-5 border border-gold/35 bg-cream p-5">
+    <h3 className="font-display text-xl font-semibold text-brown">Edit live product</h3>
+    <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <div><Label htmlFor={`${inputId}-name`}>Product name</Label><Input id={`${inputId}-name`} value={name} onChange={(e) => setName(e.target.value)} required minLength={2} /></div>
+      <div><Label htmlFor={`${inputId}-short`}>Short name</Label><Input id={`${inputId}-short`} value={shortName} onChange={(e) => setShortName(e.target.value)} /></div>
+      <div><Label htmlFor={`${inputId}-slug`}>URL slug</Label><Input id={`${inputId}-slug`} value={slug} onChange={(e) => setSlug(e.target.value)} required /></div>
+      <div><Label htmlFor={`${inputId}-image`}>Product image</Label>
+        <label htmlFor={`${inputId}-image`} className="mt-1 flex min-h-24 cursor-pointer items-center gap-4 border border-dashed border-gold-deep/45 bg-beige/55 p-4 hover:bg-gold/10">
+          {preview ? <img src={preview} alt="Product preview" className="h-16 w-16 object-cover" /> : <span className="grid h-12 w-12 shrink-0 place-items-center bg-gold/20 text-gold-deep"><ImagePlus /></span>}
+          <span className="flex items-center gap-2 text-sm font-medium text-brown">{uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}{uploading ? "Uploading image…" : "Replace image"}</span>
+        </label>
+        <Input id={`${inputId}-image`} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploading} onChange={(e) => { const file = e.target.files?.[0]; if (file) void pick(file); }} />
+      </div>
+      <div className="lg:col-span-2"><Label htmlFor={`${inputId}-desc`}>Description</Label><Textarea id={`${inputId}-desc`} value={description} onChange={(e) => setDescription(e.target.value)} rows={4} /></div>
+    </div>
+    <div className="mt-5 flex flex-wrap items-center gap-4">
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /> Visible on storefront</label>
+      <Button type="submit" disabled={busy || uploading} className="bg-leaf text-accent-foreground hover:bg-leaf/90">{busy || uploading ? <Loader2 className="animate-spin" /> : <Save />}Save changes</Button>
+      <Button type="button" variant="outline" onClick={onDone}>Cancel</Button>
+    </div>
+  </form>;
 }
 
 function VariantFields({ value, onChange, idPrefix }: { value: VariantDraft; onChange: (next: VariantDraft) => void; idPrefix: string }) {

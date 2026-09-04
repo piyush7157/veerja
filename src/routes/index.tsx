@@ -7,6 +7,7 @@ import { Header } from "@/components/site/Header";
 import { Hero } from "@/components/site/Hero";
 import { Benefits } from "@/components/site/Benefits";
 import { ProductSection } from "@/components/site/ProductSection";
+import { ProductCatalog } from "@/components/site/ProductCatalog";
 import { WhyUs } from "@/components/site/WhyUs";
 import { Process } from "@/components/site/Process";
 import { Showcase } from "@/components/site/Showcase";
@@ -17,7 +18,7 @@ import { Footer } from "@/components/site/Footer";
 import { CartDrawer } from "@/components/site/CartDrawer";
 import { Checkout } from "@/components/site/Checkout";
 import { OrderSuccess } from "@/components/site/OrderSuccess";
-import { getApprovedReviews } from "@/lib/storefront.functions";
+import { getApprovedReviews, getStorefrontProducts } from "@/lib/storefront.functions";
 
 const TITLE = "Veerja Eats | Premium A2 Cow Ghee, Bilona Churned";
 const DESCRIPTION =
@@ -28,8 +29,18 @@ const reviewsQuery = queryOptions({
   queryFn: () => getApprovedReviews(),
 });
 
+const productsQuery = queryOptions({
+  queryKey: ["storefront-products"],
+  queryFn: () => getStorefrontProducts(),
+});
+
 export const Route = createFileRoute("/")({
-  loader: ({ context }) => context.queryClient.ensureQueryData(reviewsQuery),
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(reviewsQuery),
+      context.queryClient.ensureQueryData(productsQuery),
+    ]);
+  },
   component: Index,
   head: () => ({
     meta: [
@@ -45,6 +56,7 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const { data: reviews } = useSuspenseQuery(reviewsQuery);
+  const { data: products } = useSuspenseQuery(productsQuery);
   return (
     <CartProvider>
       <div className="min-h-screen overflow-x-hidden bg-background">
@@ -52,7 +64,7 @@ function Index() {
         <main>
           <Hero />
           <Benefits />
-          <ProductSection />
+          {products.length > 0 ? <ProductCatalog products={products} /> : <ProductSection />}
           <WhyUs />
           <Process />
           <Showcase />

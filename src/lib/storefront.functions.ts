@@ -37,3 +37,22 @@ export const getApprovedReviews = createServerFn({ method: "GET" }).handler(asyn
     return [];
   }
 });
+export const getStorefrontProducts = createServerFn({ method: "GET" }).handler(async () => {
+  try {
+    const { data, error } = await publicClient()
+      .from("products")
+      .select("id,slug,name,short_name,description,image_url,product_variants(id,label,price,mrp,stock,is_active,sort_order)")
+      .eq("is_active", true)
+      .order("created_at");
+    if (error) throw error;
+    return (data ?? []).map((product) => ({
+      ...product,
+      product_variants: product.product_variants
+        .filter((variant) => variant.is_active)
+        .sort((a, b) => a.sort_order - b.sort_order || a.price - b.price),
+    })).filter((product) => product.product_variants.length > 0);
+  } catch (error) {
+    console.error("[Storefront products]", error);
+    return [];
+  }
+});
