@@ -6,7 +6,7 @@ import { SectionHeading } from "./Reveal";
 type Review = { id?: string; customer_name?: string; name?: string; city: string; rating: number; review: string };
 
 export function Testimonials({ reviews = [] }: { reviews?: Review[] }) {
-  const visible = reviews.length ? reviews.map((review) => ({ ...review, name: review.customer_name ?? review.name ?? "Customer" })) : TESTIMONIALS;
+  const visible: Review[] = reviews.length ? reviews.map((review) => ({ ...review, name: review.customer_name ?? review.name ?? "Customer" })) : TESTIMONIALS;
   const loop = [...visible, ...visible];
 
   return (
