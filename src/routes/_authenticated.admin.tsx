@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { BarChart3, Boxes, Check, ChevronRight, CircleDollarSign, Clock3, Film, Inbox, LayoutDashboard, Loader2, LogOut, Menu, MessageSquareQuote, PackageCheck, Plus, Search, ShoppingBag, Trash2, Users, X } from "lucide-react";
+import { BarChart3, Boxes, Check, ChevronRight, CircleDollarSign, Clock3, Film, ImagePlus, Inbox, LayoutDashboard, Loader2, LogOut, Menu, MessageSquareQuote, PackageCheck, Plus, Save, Search, ShoppingBag, Trash2, Upload, Users, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -72,7 +72,7 @@ function AdminContent({ section, data, search, setSearch, mutate, busy }: { sect
   if (section === "orders") { const filtered = orders.filter((o) => `${o.order_number} ${o.customers?.full_name ?? ""} ${o.customers?.mobile ?? ""}`.toLowerCase().includes(search.toLowerCase())); return <section className="bg-card p-5 shadow-warm"><SectionTitle title="Orders" subtitle="Track, search, and fulfil customer orders" search={search} setSearch={setSearch} /><OrdersTable orders={filtered} mutate={mutate} busy={busy} /></section>; }
   if (section === "products") return <ProductsPanel products={data.products} mutate={mutate} busy={busy} />;
   if (section === "customers") return <section className="bg-card p-5 shadow-warm"><SectionTitle title="Customers" subtitle="Customer contacts and purchase history" /><div className="mt-5 overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-border text-xs uppercase text-muted-foreground"><tr><th className="py-3">Customer</th><th>Contact</th><th>Location</th><th>Orders</th><th>Total spent</th></tr></thead><tbody>{data.customers.map((c) => <tr key={c.id} className="border-b border-border/60"><td className="py-4 font-medium text-brown">{c.full_name}</td><td><p>{c.email}</p><p className="text-muted-foreground">{c.mobile}</p></td><td>{c.city}, {c.state}</td><td>{c.orders.length}</td><td className="font-semibold">{inr(c.orders.filter((o) => o.status !== "cancelled").reduce((sum, o) => sum + o.total, 0))}</td></tr>)}</tbody></table><Empty show={!data.customers.length} label="No customers yet" /></div></section>;
-  if (section === "reviews") return <section className="bg-card p-5 shadow-warm"><SectionTitle title="Review moderation" subtitle="Approve genuine customer stories before they appear" /><div className="mt-5 grid gap-3">{data.reviews.map((review) => <div key={review.id} className="grid gap-4 border-b border-border p-4 md:grid-cols-[1fr_auto]"><div><div className="flex items-center gap-2"><strong className="text-brown">{review.customer_name}</strong><span className="text-gold-deep">{"★".repeat(review.rating)}</span><Status value={review.status} /></div><p className="mt-2 text-sm text-muted-foreground">{review.review}</p></div><div className="flex items-center gap-2"><Button size="sm" variant="outline" disabled={busy} onClick={() => mutate({ action: "reviewStatus", id: review.id, value: "rejected" })}>Reject</Button><Button size="sm" disabled={busy} onClick={() => mutate({ action: "reviewStatus", id: review.id, value: "approved" })}>Approve</Button></div></div>)}<Empty show={!data.reviews.length} label="No reviews to moderate" /></div></section>;
+  if (section === "reviews") return <ReviewsPanel reviews={data.reviews} mutate={mutate} busy={busy} />;
   if (section === "reels") return <ReelsPanel reels={data.reels} mutate={mutate} busy={busy} />;
   return <section className="bg-card p-5 shadow-warm"><SectionTitle title="Customer messages" subtitle="Read and resolve storefront enquiries" /><div className="mt-5 grid gap-3">{data.messages.map((message) => <article key={message.id} className="grid gap-3 border-b border-border p-4 lg:grid-cols-[220px_1fr_auto]"><div><p className="font-semibold text-brown">{message.name}</p><p className="text-xs text-muted-foreground">{message.email}</p><p className="text-xs text-muted-foreground">{message.phone}</p></div><div><div className="flex gap-2"><h3 className="font-medium">{message.subject}</h3><Status value={message.status} /></div><p className="mt-2 text-sm leading-6 text-muted-foreground">{message.message}</p></div><Select value={message.status} onValueChange={(value: "unread" | "read" | "resolved") => mutate({ action: "messageStatus", id: message.id, value })}><SelectTrigger className="w-32"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unread">Unread</SelectItem><SelectItem value="read">Read</SelectItem><SelectItem value="resolved">Resolved</SelectItem></SelectContent></Select></article>)}<Empty show={!data.messages.length} label="Inbox is clear" /></div></section>;
 }
@@ -81,6 +81,19 @@ function Metric({ icon: Icon, label, value, note }: { icon: typeof BarChart3; la
 function SectionTitle({ title, subtitle, search, setSearch }: { title: string; subtitle: string; search?: string; setSearch?: (value: string) => void }) { return <div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="font-display text-2xl font-semibold text-brown">{title}</h2><p className="mt-1 text-sm text-muted-foreground">{subtitle}</p></div>{setSearch && <div className="relative"><Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" /><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search orders" className="w-64 pl-9" /></div>}</div>; }
 function Status({ value }: { value: string }) { const good = ["approved", "delivered", "resolved", "published"].includes(value); const pending = ["new", "pending", "unread"].includes(value); return <span className={cn("inline-flex rounded-full px-2 py-1 text-[10px] font-semibold uppercase", good ? "bg-leaf/12 text-leaf" : pending ? "bg-gold/20 text-gold-deep" : "bg-secondary text-muted-foreground")}>{value}</span>; }
 function Empty({ show, label }: { show: boolean; label: string }) { return show ? <div className="py-14 text-center text-sm text-muted-foreground">{label}</div> : null; }
+function ReviewsPanel({ reviews, mutate, busy }: { reviews: AdminData["reviews"]; mutate: (data: MutationPayload) => void; busy: boolean }) {
+  return <section className="bg-card p-5 shadow-warm"><SectionTitle title="Customer reviews" subtitle="Edit every detail and choose what appears on the storefront" /><div className="mt-5 grid gap-4 xl:grid-cols-2">{reviews.map((review) => <ReviewEditor key={review.id} review={review} mutate={mutate} busy={busy} />)}<Empty show={!reviews.length} label="No customer reviews yet" /></div></section>;
+}
+function ReviewEditor({ review, mutate, busy }: { review: AdminData["reviews"][number]; mutate: (data: MutationPayload) => void; busy: boolean }) {
+  const [customerName, setCustomerName] = useState(review.customer_name); const [city, setCity] = useState(review.city);
+  const [rating, setRating] = useState(String(review.rating)); const [text, setText] = useState(review.review); const [status, setStatus] = useState(review.status);
+  return <article className="border border-border bg-background p-4">
+    <div className="mb-4 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="text-gold-deep">{"★".repeat(Number(rating) || 0)}</span><Status value={status} /></div><Button size="icon" variant="ghost" aria-label="Delete review" disabled={busy} onClick={() => { if (confirm(`Delete the review from ${customerName}?`)) mutate({ action: "deleteReview", id: review.id }); }}><Trash2 /></Button></div>
+    <div className="grid gap-3 sm:grid-cols-2"><div><Label htmlFor={`review-name-${review.id}`}>Customer name</Label><Input id={`review-name-${review.id}`} value={customerName} onChange={(e) => setCustomerName(e.target.value)} /></div><div><Label htmlFor={`review-city-${review.id}`}>City</Label><Input id={`review-city-${review.id}`} value={city} onChange={(e) => setCity(e.target.value)} /></div><div><Label htmlFor={`review-rating-${review.id}`}>Rating</Label><Select value={rating} onValueChange={setRating}><SelectTrigger id={`review-rating-${review.id}`}><SelectValue /></SelectTrigger><SelectContent>{[5, 4, 3, 2, 1].map((value) => <SelectItem key={value} value={String(value)}>{value} stars</SelectItem>)}</SelectContent></Select></div><div><Label htmlFor={`review-status-${review.id}`}>Visibility</Label><Select value={status} onValueChange={(value: "pending" | "approved" | "rejected") => setStatus(value)}><SelectTrigger id={`review-status-${review.id}`}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="approved">Published</SelectItem><SelectItem value="pending">Pending</SelectItem><SelectItem value="rejected">Hidden</SelectItem></SelectContent></Select></div></div>
+    <div className="mt-3"><Label htmlFor={`review-text-${review.id}`}>Review message</Label><Textarea id={`review-text-${review.id}`} rows={4} value={text} onChange={(e) => setText(e.target.value)} /></div>
+    <Button className="mt-4 bg-leaf text-accent-foreground hover:bg-leaf/90" disabled={busy || customerName.trim().length < 2 || text.trim().length < 2} onClick={() => mutate({ action: "updateReview", id: review.id, customerName: customerName.trim(), city: city.trim(), rating: Number(rating), review: text.trim(), status })}>{busy ? <Loader2 className="animate-spin" /> : <Save />}Save review</Button>
+  </article>;
+}
 function OrdersTable({ orders, mutate, busy }: { orders: AdminData["orders"]; mutate: (data: MutationPayload) => void; busy: boolean }) { return <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead className="border-b border-border text-xs uppercase text-muted-foreground"><tr><th className="py-3">Order</th><th>Customer</th><th>Items</th><th>Date</th><th>Total</th><th>Status</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id} className="border-b border-border/60"><td className="py-4 font-semibold text-brown">#{order.order_number}</td><td><p>{order.customers?.full_name}</p><p className="text-xs text-muted-foreground">{order.customers?.mobile}</p></td><td>{order.order_items.reduce((sum, item) => sum + item.quantity, 0)}</td><td>{new Date(order.created_at).toLocaleDateString("en-IN")}</td><td className="font-semibold">{inr(order.total)}</td><td><Select disabled={busy} value={order.status} onValueChange={(value: "new" | "confirmed" | "packed" | "shipped" | "delivered" | "cancelled") => mutate({ action: "orderStatus", id: order.id, value })}><SelectTrigger className="w-36"><SelectValue /></SelectTrigger><SelectContent>{["new", "confirmed", "packed", "shipped", "delivered", "cancelled"].map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent></Select></td></tr>)}</tbody></table><Empty show={!orders.length} label="No orders found" /></div>; }
 type VariantDraft = { label: string; sku: string; mrp: string; discount: string; stock: string };
 const emptyVariant: VariantDraft = { label: "", sku: "", mrp: "", discount: "0", stock: "0" };
@@ -91,7 +104,7 @@ function ProductsPanel({ products, mutate, busy }: { products: AdminData["produc
   return <div className="space-y-5">
     <div className="flex flex-wrap items-end justify-between gap-4">
       <SectionTitle title="Products & inventory" subtitle="Add products, set pack pricing, discounts, and stock" />
-      <Button onClick={() => setShowForm((open) => !open)} className="bg-brown text-primary-foreground hover:bg-brown/90">{showForm ? <X /> : <Plus />}{showForm ? "Close form" : "Add product"}</Button>
+      <Button onClick={() => setShowForm((open) => !open)} className="bg-gold text-brown shadow-warm hover:bg-gold-deep hover:text-cream">{showForm ? <X /> : <Plus />}{showForm ? "Close form" : "Add product"}</Button>
     </div>
     {showForm && <AddProductForm busy={busy} mutate={mutate} onDone={() => setShowForm(false)} />}
     {products.map((product) => <section key={product.id} className="bg-card p-5 shadow-warm">
@@ -126,8 +139,19 @@ function VariantFields({ value, onChange, idPrefix }: { value: VariantDraft; onC
 
 function AddProductForm({ mutate, busy, onDone }: { mutate: (data: MutationPayload) => void; busy: boolean; onDone: () => void }) {
   const [name, setName] = useState(""); const [shortName, setShortName] = useState(""); const [slug, setSlug] = useState("");
-  const [description, setDescription] = useState(""); const [imageUrl, setImageUrl] = useState(""); const [active, setActive] = useState(true);
+  const [description, setDescription] = useState(""); const [imageUrl, setImageUrl] = useState(""); const [imagePreview, setImagePreview] = useState(""); const [uploading, setUploading] = useState(false); const [active, setActive] = useState(true);
   const [variants, setVariants] = useState<VariantDraft[]>([{ ...emptyVariant }]);
+  const uploadImage = async (file: File) => {
+    if (!file.type.startsWith("image/")) { toast.error("Choose a JPG, PNG, or WebP image"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be smaller than 5 MB"); return; }
+    setUploading(true); setImagePreview(URL.createObjectURL(file));
+    const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+    const path = `${crypto.randomUUID()}.${extension}`;
+    const { error } = await supabase.storage.from("product-images").upload(path, file, { contentType: file.type, upsert: false });
+    setUploading(false);
+    if (error) { setImageUrl(""); toast.error("Image upload failed", { description: error.message }); return; }
+    setImageUrl(`/api/public/product-image?path=${encodeURIComponent(path)}`); toast.success("Product image uploaded");
+  };
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     mutate({
@@ -138,25 +162,27 @@ function AddProductForm({ mutate, busy, onDone }: { mutate: (data: MutationPaylo
     });
     onDone();
   };
-  return <form onSubmit={submit} className="bg-card p-5 shadow-warm">
-    <SectionTitle title="New product" subtitle="Fill in the product details and at least one pack size" />
+  return <form onSubmit={submit} className="overflow-hidden border border-gold/35 bg-cream shadow-warm">
+    <div className="border-b border-gold/30 bg-brown px-5 py-5 text-cream"><h2 className="font-display text-2xl font-semibold">New product</h2><p className="mt-1 text-sm text-cream/75">Fill in the details, upload a photo, and add at least one pack size</p></div>
+    <div className="p-5">
     <div className="mt-5 grid gap-4 lg:grid-cols-2">
       <div><Label htmlFor="p-name">Product name</Label><Input id="p-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Veerja A2 Bilona Ghee" required minLength={2} /></div>
       <div><Label htmlFor="p-short">Short name</Label><Input id="p-short" value={shortName} onChange={(e) => setShortName(e.target.value)} placeholder="A2 Ghee" /></div>
       <div><Label htmlFor="p-slug">URL slug</Label><Input id="p-slug" value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="veerja-a2-ghee" /><p className="mt-1 text-xs text-muted-foreground">Leave blank to generate from the name.</p></div>
-      <div><Label htmlFor="p-image">Image URL</Label><Input id="p-image" type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." /></div>
+      <div><Label htmlFor="p-image">Product image</Label><label htmlFor="p-image" className="mt-1 flex min-h-28 cursor-pointer items-center gap-4 border border-dashed border-gold-deep/45 bg-beige/55 p-4 transition-colors hover:bg-gold/10">{imagePreview ? <img src={imagePreview} alt="Product preview" className="h-20 w-20 object-cover" /> : <span className="grid h-14 w-14 shrink-0 place-items-center bg-gold/20 text-gold-deep"><ImagePlus /></span>}<span><span className="flex items-center gap-2 font-medium text-brown">{uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}{uploading ? "Uploading image…" : imageUrl ? "Choose a different image" : "Choose product image"}</span><span className="mt-1 block text-xs text-muted-foreground">JPG, PNG or WebP · maximum 5 MB</span></span></label><Input id="p-image" type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploading} onChange={(e) => { const file = e.target.files?.[0]; if (file) void uploadImage(file); }} /></div>
       <div className="lg:col-span-2"><Label htmlFor="p-desc">Description</Label><Textarea id="p-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} placeholder="Hand-churned in small batches..." /></div>
     </div>
     <div className="mt-6 space-y-4">
-      {variants.map((variant, index) => <div key={index} className="border border-border bg-background p-4">
+      {variants.map((variant, index) => <div key={index} className="border border-gold/25 bg-background p-4">
         <div className="mb-3 flex items-center justify-between"><strong className="text-sm text-brown">Pack size {index + 1}</strong>{variants.length > 1 && <Button type="button" size="icon" variant="ghost" aria-label="Remove pack size" onClick={() => setVariants(variants.filter((_, i) => i !== index))}><Trash2 /></Button>}</div>
         <VariantFields idPrefix={`new-${index}`} value={variant} onChange={(next) => setVariants(variants.map((item, i) => (i === index ? next : item)))} />
       </div>)}
-      <Button type="button" variant="outline" onClick={() => setVariants([...variants, { ...emptyVariant }])}><Plus /> Add another pack size</Button>
+      <Button type="button" variant="outline" className="border-gold-deep/40 text-brown hover:bg-gold/10" onClick={() => setVariants([...variants, { ...emptyVariant }])}><Plus /> Add another pack size</Button>
     </div>
     <div className="mt-6 flex flex-wrap items-center gap-4">
       <label className="flex items-center gap-2 text-sm text-foreground"><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /> Publish on storefront</label>
-      <Button type="submit" disabled={busy} className="bg-brown text-primary-foreground hover:bg-brown/90">{busy ? <Loader2 className="animate-spin" /> : <Check />}Create product</Button>
+       <Button type="submit" disabled={busy || uploading || !imageUrl} className="bg-leaf text-accent-foreground hover:bg-leaf/90">{busy || uploading ? <Loader2 className="animate-spin" /> : <Check />}Create product</Button>
+    </div>
     </div>
   </form>;
 }
