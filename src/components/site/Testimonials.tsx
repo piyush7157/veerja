@@ -3,8 +3,11 @@ import { Quote, Star } from "lucide-react";
 import { TESTIMONIALS } from "@/lib/shop-data";
 import { SectionHeading } from "./Reveal";
 
-export function Testimonials() {
-  const loop = [...TESTIMONIALS, ...TESTIMONIALS];
+type Review = { id?: string; customer_name?: string; name?: string; city: string; rating: number; review: string };
+
+export function Testimonials({ reviews = [] }: { reviews?: Review[] }) {
+  const visible = reviews.length ? reviews.map((review) => ({ ...review, name: review.customer_name ?? review.name ?? "Customer" })) : TESTIMONIALS;
+  const loop = [...visible, ...visible];
 
   return (
     <section id="reviews" className="overflow-hidden py-16 lg:py-24">
@@ -22,7 +25,7 @@ export function Testimonials() {
         <div className="flex w-max gap-4 [animation:marquee_38s_linear_infinite] group-hover:[animation-play-state:paused]">
           {loop.map((t, i) => (
             <article
-              key={`${t.name}-${i}`}
+              key={`${t.id ?? t.name}-${i}`}
               className="w-[19rem] shrink-0 rounded-2xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-gold/40 hover:shadow-warm sm:w-[22rem]"
             >
               <Quote className="h-6 w-6 text-gold/60" />

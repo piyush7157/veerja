@@ -71,6 +71,8 @@ const variantInput = z.object({
 export const mutationSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("orderStatus"), id: z.string().uuid(), value: z.enum(["new", "confirmed", "packed", "shipped", "delivered", "cancelled"]) }),
   z.object({ action: z.literal("reviewStatus"), id: z.string().uuid(), value: z.enum(["pending", "approved", "rejected"]) }),
+  z.object({ action: z.literal("updateReview"), id: z.string().uuid(), customerName: z.string().trim().min(2).max(100), city: z.string().trim().max(100), rating: z.number().int().min(1).max(5), review: z.string().trim().min(2).max(2000), status: z.enum(["pending", "approved", "rejected"]) }),
+  z.object({ action: z.literal("deleteReview"), id: z.string().uuid() }),
   z.object({ action: z.literal("messageStatus"), id: z.string().uuid(), value: z.enum(["unread", "read", "resolved"]) }),
   z.object({ action: z.literal("toggleProduct"), id: z.string().uuid(), value: z.boolean() }),
   z.object({ action: z.literal("updateVariant"), id: z.string().uuid(), price: z.number().int().min(0), mrp: z.number().int().min(0), stock: z.number().int().min(0), active: z.boolean() }),
@@ -83,7 +85,7 @@ export const mutationSchema = z.discriminatedUnion("action", [
     shortName: z.string().trim().min(1).max(60),
     slug: z.string().trim().regex(/^[a-z0-9-]+$/, "Use lowercase letters, numbers and dashes").min(2).max(80),
     description: z.string().trim().max(2000),
-    imageUrl: z.string().url().max(500).or(z.literal("")),
+    imageUrl: z.string().max(500).refine((value) => value === "" || value.startsWith("/api/public/product-image?path="), "Upload a product image"),
     active: z.boolean(),
     variants: z.array(variantInput).min(1).max(8),
   }),
@@ -107,6 +109,8 @@ export const mutateAdminData = createServerFn({ method: "POST" })
     let result;
     if (data.action === "orderStatus") result = await db.from("orders").update({ status: data.value }).eq("id", data.id);
     else if (data.action === "reviewStatus") result = await db.from("reviews").update({ status: data.value }).eq("id", data.id);
+    else if (data.action === "updateReview") result = await db.from("reviews").update({ customer_name: data.customerName, city: data.city, rating: data.rating, review: data.review, status: data.status }).eq("id", data.id);
+    else if (data.action === "deleteReview") result = await db.from("reviews").delete().eq("id", data.id);
     else if (data.action === "messageStatus") result = await db.from("customer_messages").update({ status: data.value }).eq("id", data.id);
     else if (data.action === "toggleProduct") result = await db.from("products").update({ is_active: data.value }).eq("id", data.id);
     else if (data.action === "updateVariant") {

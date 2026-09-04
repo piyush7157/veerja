@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
 import { Toaster } from "@/components/ui/sonner";
 import { CartProvider } from "@/lib/cart-context";
@@ -16,12 +17,19 @@ import { Footer } from "@/components/site/Footer";
 import { CartDrawer } from "@/components/site/CartDrawer";
 import { Checkout } from "@/components/site/Checkout";
 import { OrderSuccess } from "@/components/site/OrderSuccess";
+import { getApprovedReviews } from "@/lib/storefront.functions";
 
 const TITLE = "Veerja Eats | Premium A2 Cow Ghee, Bilona Churned";
 const DESCRIPTION =
   "Buy Veerja Eats premium A2 cow ghee — hand-churned by the traditional bilona method from free-grazing desi cow milk. 250ml, 500ml & 1L jars, free delivery in India.";
 
+const reviewsQuery = queryOptions({
+  queryKey: ["storefront-reviews"],
+  queryFn: () => getApprovedReviews(),
+});
+
 export const Route = createFileRoute("/")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(reviewsQuery),
   component: Index,
   head: () => ({
     meta: [
@@ -36,6 +44,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const { data: reviews } = useSuspenseQuery(reviewsQuery);
   return (
     <CartProvider>
       <div className="min-h-screen overflow-x-hidden bg-background">
@@ -47,7 +56,7 @@ function Index() {
           <WhyUs />
           <Process />
           <Showcase />
-          <Testimonials />
+          <Testimonials reviews={reviews} />
           <FaqSection />
           <FinalCta />
         </main>
