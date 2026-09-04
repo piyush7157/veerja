@@ -292,3 +292,40 @@ function VariantEditor({ variant, mutate, busy }: { variant: AdminData["products
 }
 
 function ReelsPanel({ reels, mutate, busy }: { reels: AdminData["reels"]; mutate: (data: MutationPayload) => void; busy: boolean }) { const submit = (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); const form = new FormData(event.currentTarget); mutate({ action: "addReel", title: String(form.get("title")), mediaUrl: String(form.get("mediaUrl")), caption: String(form.get("caption")), published: form.get("published") === "on" }); event.currentTarget.reset(); }; return <div className="grid gap-5 xl:grid-cols-[380px_1fr]"><form onSubmit={submit} className="bg-card p-5 shadow-warm"><SectionTitle title="Add reel" subtitle="Publish short-form brand content" /><div className="mt-5 space-y-4"><div><Label htmlFor="reel-title">Title</Label><Input id="reel-title" name="title" required minLength={2} /></div><div><Label htmlFor="media-url">Media URL</Label><Input id="media-url" name="mediaUrl" type="url" required /></div><div><Label htmlFor="caption">Caption</Label><Textarea id="caption" name="caption" /></div><label className="flex items-center gap-2 text-sm"><input type="checkbox" name="published" /> Publish now</label><Button type="submit" disabled={busy} className="w-full">Add reel</Button></div></form><section className="bg-card p-5 shadow-warm"><SectionTitle title="Reel library" subtitle="Manage visibility and remove old content" /><div className="mt-5 space-y-3">{reels.map((reel) => <div key={reel.id} className="flex items-center gap-3 border-b border-border p-3"><Film className="text-gold-deep" /><div className="min-w-0 flex-1"><p className="truncate font-medium text-brown">{reel.title}</p><p className="truncate text-xs text-muted-foreground">{reel.media_url}</p></div><Button size="sm" variant="outline" onClick={() => mutate({ action: "toggleReel", id: reel.id, value: !reel.is_published })}>{reel.is_published ? "Published" : "Draft"}</Button><Button size="icon" variant="ghost" aria-label="Delete reel" onClick={() => mutate({ action: "deleteReel", id: reel.id })}><Trash2 /></Button></div>)}<Empty show={!reels.length} label="No reels added" /></div></section></div>; }
+async function uploadSiteLogo(file: File) {
+  if (!file.type.startsWith("image/")) { toast.error("Choose a JPG, PNG, WebP or SVG image"); return null; }
+  if (file.size > 2 * 1024 * 1024) { toast.error("Logo must be smaller than 2 MB"); return null; }
+  const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
+  const path = `logo-${crypto.randomUUID()}.${extension}`;
+  const { error } = await supabase.storage.from("site-assets").upload(path, file, { contentType: file.type, upsert: false });
+  if (error) { toast.error("Logo upload failed", { description: error.message }); return null; }
+  return `/api/public/site-image?path=${encodeURIComponent(path)}`;
+}
+
+function BrandingPanel({ logoUrl, mutate, busy }: { logoUrl: string | null; mutate: (data: MutationPayload) => void; busy: boolean }) {
+  const [uploading, setUploading] = useState(false);
+  const pick = async (file: File) => {
+    setUploading(true);
+    const url = await uploadSiteLogo(file);
+    setUploading(false);
+    if (url) mutate({ action: "updateLogo", logoUrl: url });
+  };
+  return <section className="max-w-2xl bg-card p-5 shadow-warm">
+    <SectionTitle title="Website logo" subtitle="Upload the logo shown in the website header and footer" />
+    <div className="mt-6 flex flex-wrap items-center gap-6">
+      <div className="grid h-24 w-24 shrink-0 place-items-center rounded-full border border-gold-deep/35 bg-beige/60 overflow-hidden">
+        {logoUrl ? <img src={logoUrl} alt="Current website logo" className="h-full w-full object-cover" /> : <span className="font-display text-3xl font-semibold text-gold-deep">वी</span>}
+      </div>
+      <div className="space-y-3">
+        <label htmlFor="logo-file" className="flex cursor-pointer items-center gap-2 border border-dashed border-gold-deep/45 bg-beige/55 px-4 py-3 text-sm font-medium text-brown hover:bg-gold/10">
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          {uploading ? "Uploading logo…" : logoUrl ? "Replace logo" : "Upload logo"}
+        </label>
+        <Input id="logo-file" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="sr-only" disabled={uploading || busy}
+          onChange={(e) => { const file = e.target.files?.[0]; if (file) void pick(file); }} />
+        <p className="text-xs text-muted-foreground">Square images work best. Max 2 MB.</p>
+        {logoUrl && <Button variant="outline" disabled={busy} onClick={() => mutate({ action: "updateLogo", logoUrl: "" })}>Remove logo</Button>}
+      </div>
+    </div>
+  </section>;
+}
