@@ -16,13 +16,14 @@ import { inr } from "@/lib/shop-data";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-type Section = "dashboard" | "orders" | "products" | "customers" | "reviews" | "reels" | "messages";
+type Section = "dashboard" | "orders" | "products" | "customers" | "reviews" | "reels" | "messages" | "branding";
 const NAV: { id: Section; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard }, { id: "orders", label: "Orders", icon: ShoppingBag },
   { id: "products", label: "Products", icon: Boxes }, { id: "customers", label: "Customers", icon: Users },
   { id: "reviews", label: "Reviews", icon: MessageSquareQuote }, { id: "reels", label: "Reels", icon: Film },
-  { id: "messages", label: "Messages", icon: Inbox },
+  { id: "messages", label: "Messages", icon: Inbox }, { id: "branding", label: "Logo & branding", icon: ImagePlus },
 ];
+
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [
