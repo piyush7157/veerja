@@ -6,7 +6,7 @@ import { SectionHeading } from "./Reveal";
 type Review = { id?: string; customer_name?: string; name?: string; city: string; rating: number; review: string };
 
 export function Testimonials({ reviews = [] }: { reviews?: Review[] }) {
-  const visible: Review[] = reviews.length ? reviews.map((review) => ({ ...review, name: review.customer_name ?? review.name ?? "Customer" })) : TESTIMONIALS;
+  const visible = reviews.length ? reviews.map((review) => ({ ...review, name: review.customer_name ?? review.name ?? "Customer" })) : TESTIMONIALS;
   const loop = [...visible, ...visible];
 
   return (
@@ -25,7 +25,7 @@ export function Testimonials({ reviews = [] }: { reviews?: Review[] }) {
         <div className="flex w-max gap-4 [animation:marquee_38s_linear_infinite] group-hover:[animation-play-state:paused]">
           {loop.map((t, i) => (
             <article
-              key={`${t.id ?? t.name}-${i}`}
+              key={`${"id" in t ? t.id : t.name}-${i}`}
               className="w-[19rem] shrink-0 rounded-2xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-gold/40 hover:shadow-warm sm:w-[22rem]"
             >
               <Quote className="h-6 w-6 text-gold/60" />
