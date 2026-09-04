@@ -19,7 +19,7 @@ import { Footer } from "@/components/site/Footer";
 import { CartDrawer } from "@/components/site/CartDrawer";
 import { Checkout } from "@/components/site/Checkout";
 import { OrderSuccess } from "@/components/site/OrderSuccess";
-import { getApprovedReviews, getStorefrontProducts } from "@/lib/storefront.functions";
+import { getApprovedReviews, getStorefrontProducts, getSiteSettings } from "@/lib/storefront.functions";
 
 const TITLE = "Veerja Eats | Premium A2 Cow Ghee, Bilona Churned";
 const DESCRIPTION =
@@ -35,12 +35,20 @@ const productsQuery = queryOptions({
   queryFn: () => getStorefrontProducts(),
 });
 
+const settingsQuery = queryOptions({
+  queryKey: ["storefront-settings"],
+  queryFn: () => getSiteSettings(),
+});
+
+
 export const Route = createFileRoute("/")({
   loader: async ({ context }) => {
     await Promise.all([
       context.queryClient.ensureQueryData(reviewsQuery),
       context.queryClient.ensureQueryData(productsQuery),
+      context.queryClient.ensureQueryData(settingsQuery),
     ]);
+
   },
   component: Index,
   head: () => ({
@@ -58,10 +66,12 @@ export const Route = createFileRoute("/")({
 function Index() {
   const { data: reviews } = useSuspenseQuery(reviewsQuery);
   const { data: products } = useSuspenseQuery(productsQuery);
+  const { data: settings } = useSuspenseQuery(settingsQuery);
   return (
     <CartProvider>
       <div className="min-h-screen overflow-x-hidden bg-background">
-        <Header />
+        <Header logoUrl={settings.logoUrl} />
+
         <main>
           <Hero />
           <Benefits />
@@ -74,7 +84,7 @@ function Index() {
           <FinalCta />
           <ContactSection />
         </main>
-        <Footer />
+        <Footer logoUrl={settings.logoUrl} />
         <CartDrawer />
         <Checkout />
         <OrderSuccess />

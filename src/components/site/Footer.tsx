@@ -18,17 +18,22 @@ const SOCIALS = [
   { label: "WhatsApp", Icon: MessageCircle },
 ];
 
-export function Footer() {
+export function Footer({ logoUrl }: { logoUrl?: string | null }) {
   return (
     <footer className="border-t-2 border-gold/40 bg-gradient-to-b from-brown via-brown to-[oklch(0.24_0.045_50)] text-cream">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-4">
         <div className="min-w-0 lg:col-span-2">
           <div className="flex min-w-0 items-center gap-2.5">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-gold to-gold-deep font-semibold text-brown">
-              वी
-            </span>
+            {logoUrl ? (
+              <img src={logoUrl} alt="Veerja Eats logo" className="h-11 w-11 shrink-0 rounded-full object-cover" />
+            ) : (
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-gold to-gold-deep font-semibold text-brown">
+                वी
+              </span>
+            )}
             <span className="font-display text-2xl font-semibold text-cream">Veerja Eats</span>
           </div>
+
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-cream/70">
             Premium A2 Cow Ghee, hand-churned in small batches using the traditional bilona method.
             Purity, tradition and trust in every jar.

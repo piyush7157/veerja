@@ -44,21 +44,24 @@ export const getAdminData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const db = await getAdminClientFor(context.userId);
-    const [orders, products, customers, reviews, reels, messages] = await Promise.all([
+    const [orders, products, customers, reviews, reels, messages, settings] = await Promise.all([
       db.from("orders").select("*, customers(*), order_items(*)").order("created_at", { ascending: false }),
       db.from("products").select("*, product_variants(*)").order("created_at"),
       db.from("customers").select("*, orders(id,total,status,created_at)").order("created_at", { ascending: false }),
       db.from("reviews").select("*").order("created_at", { ascending: false }),
       db.from("reels").select("*").order("sort_order"),
       db.from("customer_messages").select("*").order("created_at", { ascending: false }),
+      db.from("site_settings").select("id,logo_url").order("created_at").limit(1).maybeSingle(),
     ]);
     const failed = [orders, products, customers, reviews, reels, messages].find((result) => result.error);
     if (failed?.error) throw failed.error;
     return {
       orders: orders.data ?? [], products: products.data ?? [], customers: customers.data ?? [],
       reviews: reviews.data ?? [], reels: reels.data ?? [], messages: messages.data ?? [],
+      settings: settings.data ?? null,
     };
   });
+
 
 const variantInput = z.object({
   label: z.string().trim().min(1).max(60),
@@ -102,7 +105,12 @@ export const mutationSchema = z.discriminatedUnion("action", [
   variantInput.extend({ action: z.literal("addVariant"), productId: z.string().uuid() }),
   z.object({ action: z.literal("deleteVariant"), id: z.string().uuid() }),
   z.object({ action: z.literal("deleteProduct"), id: z.string().uuid() }),
+  z.object({
+    action: z.literal("updateLogo"),
+    logoUrl: z.string().max(500).refine((value) => value === "" || value.startsWith("/api/public/site-image?path="), "Upload a logo image"),
+  }),
 ]);
+
 
 function sellingPrice(mrp: number, discount: number) {
   return Math.max(1, Math.round(mrp * (1 - discount / 100)));
@@ -154,10 +162,16 @@ export const mutateAdminData = createServerFn({ method: "POST" })
         price: sellingPrice(data.mrp, data.discount), stock: data.stock,
       });
     } else if (data.action === "deleteVariant") result = await db.from("product_variants").delete().eq("id", data.id);
-    else {
+    else if (data.action === "updateLogo") {
+      const { data: existing } = await db.from("site_settings").select("id").order("created_at").limit(1).maybeSingle();
+      result = existing
+        ? await db.from("site_settings").update({ logo_url: data.logoUrl || null }).eq("id", existing.id)
+        : await db.from("site_settings").insert({ logo_url: data.logoUrl || null });
+    } else {
       await db.from("product_variants").delete().eq("product_id", data.id);
       result = await db.from("products").delete().eq("id", data.id);
     }
+
 
     if (result.error) throw result.error;
     return { ok: true };

@@ -16,13 +16,14 @@ import { inr } from "@/lib/shop-data";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-type Section = "dashboard" | "orders" | "products" | "customers" | "reviews" | "reels" | "messages";
+type Section = "dashboard" | "orders" | "products" | "customers" | "reviews" | "reels" | "messages" | "branding";
 const NAV: { id: Section; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard }, { id: "orders", label: "Orders", icon: ShoppingBag },
   { id: "products", label: "Products", icon: Boxes }, { id: "customers", label: "Customers", icon: Users },
   { id: "reviews", label: "Reviews", icon: MessageSquareQuote }, { id: "reels", label: "Reels", icon: Film },
-  { id: "messages", label: "Messages", icon: Inbox },
+  { id: "messages", label: "Messages", icon: Inbox }, { id: "branding", label: "Logo & branding", icon: ImagePlus },
 ];
+
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [
@@ -74,6 +75,8 @@ function AdminContent({ section, data, search, setSearch, mutate, busy }: { sect
   if (section === "customers") return <section className="bg-card p-5 shadow-warm"><SectionTitle title="Customers" subtitle="Customer contacts and purchase history" /><div className="mt-5 overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-border text-xs uppercase text-muted-foreground"><tr><th className="py-3">Customer</th><th>Contact</th><th>Location</th><th>Orders</th><th>Total spent</th></tr></thead><tbody>{data.customers.map((c) => <tr key={c.id} className="border-b border-border/60"><td className="py-4 font-medium text-brown">{c.full_name}</td><td><p>{c.email}</p><p className="text-muted-foreground">{c.mobile}</p></td><td>{c.city}, {c.state}</td><td>{c.orders.length}</td><td className="font-semibold">{inr(c.orders.filter((o) => o.status !== "cancelled").reduce((sum, o) => sum + o.total, 0))}</td></tr>)}</tbody></table><Empty show={!data.customers.length} label="No customers yet" /></div></section>;
   if (section === "reviews") return <ReviewsPanel reviews={data.reviews} mutate={mutate} busy={busy} />;
   if (section === "reels") return <ReelsPanel reels={data.reels} mutate={mutate} busy={busy} />;
+  if (section === "branding") return <BrandingPanel logoUrl={data.settings?.logo_url ?? null} mutate={mutate} busy={busy} />;
+
   return <><section className="bg-card p-5 shadow-warm"><SectionTitle title="Customer messages" subtitle="Read and resolve storefront enquiries" /><div className="mt-5 grid gap-3">{data.messages.map((message) => <article key={message.id} className="grid gap-3 border-b border-border p-4 lg:grid-cols-[220px_1fr_auto]"><div><p className="font-semibold text-brown">{message.name}</p><p className="text-xs text-muted-foreground">{message.email}</p><p className="text-xs text-muted-foreground">{message.phone}</p></div><div><div className="flex gap-2"><h3 className="font-medium">{message.subject}</h3><Status value={message.status} /></div><p className="mt-2 text-sm leading-6 text-muted-foreground">{message.message}</p></div><Select value={message.status} onValueChange={(value: "unread" | "read" | "resolved") => mutate({ action: "messageStatus", id: message.id, value })}><SelectTrigger className="w-32"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unread">Unread</SelectItem><SelectItem value="read">Read</SelectItem><SelectItem value="resolved">Resolved</SelectItem></SelectContent></Select></article>)}<Empty show={!data.messages.length} label="Inbox is clear" /></div></section>
   <section className="mt-6 bg-card p-5 shadow-warm"><SectionTitle title="Website review messages" subtitle="Every review shown on the website — edit the words, rating or visibility here" /><div className="mt-5 grid gap-4 xl:grid-cols-2">{data.reviews.map((review) => <ReviewEditor key={review.id} review={review} mutate={mutate} busy={busy} />)}<Empty show={!data.reviews.length} label="No website reviews yet" /></div></section></>;
 }
@@ -289,3 +292,40 @@ function VariantEditor({ variant, mutate, busy }: { variant: AdminData["products
 }
 
 function ReelsPanel({ reels, mutate, busy }: { reels: AdminData["reels"]; mutate: (data: MutationPayload) => void; busy: boolean }) { const submit = (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); const form = new FormData(event.currentTarget); mutate({ action: "addReel", title: String(form.get("title")), mediaUrl: String(form.get("mediaUrl")), caption: String(form.get("caption")), published: form.get("published") === "on" }); event.currentTarget.reset(); }; return <div className="grid gap-5 xl:grid-cols-[380px_1fr]"><form onSubmit={submit} className="bg-card p-5 shadow-warm"><SectionTitle title="Add reel" subtitle="Publish short-form brand content" /><div className="mt-5 space-y-4"><div><Label htmlFor="reel-title">Title</Label><Input id="reel-title" name="title" required minLength={2} /></div><div><Label htmlFor="media-url">Media URL</Label><Input id="media-url" name="mediaUrl" type="url" required /></div><div><Label htmlFor="caption">Caption</Label><Textarea id="caption" name="caption" /></div><label className="flex items-center gap-2 text-sm"><input type="checkbox" name="published" /> Publish now</label><Button type="submit" disabled={busy} className="w-full">Add reel</Button></div></form><section className="bg-card p-5 shadow-warm"><SectionTitle title="Reel library" subtitle="Manage visibility and remove old content" /><div className="mt-5 space-y-3">{reels.map((reel) => <div key={reel.id} className="flex items-center gap-3 border-b border-border p-3"><Film className="text-gold-deep" /><div className="min-w-0 flex-1"><p className="truncate font-medium text-brown">{reel.title}</p><p className="truncate text-xs text-muted-foreground">{reel.media_url}</p></div><Button size="sm" variant="outline" onClick={() => mutate({ action: "toggleReel", id: reel.id, value: !reel.is_published })}>{reel.is_published ? "Published" : "Draft"}</Button><Button size="icon" variant="ghost" aria-label="Delete reel" onClick={() => mutate({ action: "deleteReel", id: reel.id })}><Trash2 /></Button></div>)}<Empty show={!reels.length} label="No reels added" /></div></section></div>; }
+async function uploadSiteLogo(file: File) {
+  if (!file.type.startsWith("image/")) { toast.error("Choose a JPG, PNG, WebP or SVG image"); return null; }
+  if (file.size > 2 * 1024 * 1024) { toast.error("Logo must be smaller than 2 MB"); return null; }
+  const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
+  const path = `logo-${crypto.randomUUID()}.${extension}`;
+  const { error } = await supabase.storage.from("site-assets").upload(path, file, { contentType: file.type, upsert: false });
+  if (error) { toast.error("Logo upload failed", { description: error.message }); return null; }
+  return `/api/public/site-image?path=${encodeURIComponent(path)}`;
+}
+
+function BrandingPanel({ logoUrl, mutate, busy }: { logoUrl: string | null; mutate: (data: MutationPayload) => void; busy: boolean }) {
+  const [uploading, setUploading] = useState(false);
+  const pick = async (file: File) => {
+    setUploading(true);
+    const url = await uploadSiteLogo(file);
+    setUploading(false);
+    if (url) mutate({ action: "updateLogo", logoUrl: url });
+  };
+  return <section className="max-w-2xl bg-card p-5 shadow-warm">
+    <SectionTitle title="Website logo" subtitle="Upload the logo shown in the website header and footer" />
+    <div className="mt-6 flex flex-wrap items-center gap-6">
+      <div className="grid h-24 w-24 shrink-0 place-items-center rounded-full border border-gold-deep/35 bg-beige/60 overflow-hidden">
+        {logoUrl ? <img src={logoUrl} alt="Current website logo" className="h-full w-full object-cover" /> : <span className="font-display text-3xl font-semibold text-gold-deep">वी</span>}
+      </div>
+      <div className="space-y-3">
+        <label htmlFor="logo-file" className="flex cursor-pointer items-center gap-2 border border-dashed border-gold-deep/45 bg-beige/55 px-4 py-3 text-sm font-medium text-brown hover:bg-gold/10">
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          {uploading ? "Uploading logo…" : logoUrl ? "Replace logo" : "Upload logo"}
+        </label>
+        <Input id="logo-file" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="sr-only" disabled={uploading || busy}
+          onChange={(e) => { const file = e.target.files?.[0]; if (file) void pick(file); }} />
+        <p className="text-xs text-muted-foreground">Square images work best. Max 2 MB.</p>
+        {logoUrl && <Button variant="outline" disabled={busy} onClick={() => mutate({ action: "updateLogo", logoUrl: "" })}>Remove logo</Button>}
+      </div>
+    </div>
+  </section>;
+}
