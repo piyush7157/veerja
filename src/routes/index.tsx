@@ -14,6 +14,7 @@ import { Showcase } from "@/components/site/Showcase";
 import { Testimonials } from "@/components/site/Testimonials";
 import { FaqSection } from "@/components/site/FaqSection";
 import { FinalCta } from "@/components/site/FinalCta";
+import { ContactSection } from "@/components/site/ContactSection";
 import { Footer } from "@/components/site/Footer";
 import { CartDrawer } from "@/components/site/CartDrawer";
 import { Checkout } from "@/components/site/Checkout";
@@ -71,6 +72,7 @@ function Index() {
           <Testimonials reviews={reviews} />
           <FaqSection />
           <FinalCta />
+          <ContactSection />
         </main>
         <Footer />
         <CartDrawer />
