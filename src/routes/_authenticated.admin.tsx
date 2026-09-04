@@ -107,19 +107,7 @@ function ProductsPanel({ products, mutate, busy }: { products: AdminData["produc
       <Button onClick={() => setShowForm((open) => !open)} className="bg-gold text-brown shadow-warm hover:bg-gold-deep hover:text-cream">{showForm ? <X /> : <Plus />}{showForm ? "Close form" : "Add product"}</Button>
     </div>
     {showForm && <AddProductForm busy={busy} mutate={mutate} onDone={() => setShowForm(false)} />}
-    {products.map((product) => <section key={product.id} className="bg-card p-5 shadow-warm">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div><h2 className="font-display text-2xl font-semibold text-brown">{product.name}</h2><p className="text-xs text-muted-foreground">/{product.slug}</p><p className="mt-1 max-w-2xl text-sm text-muted-foreground">{product.description}</p></div>
-        <div className="flex items-center gap-2">
-          <Button variant={product.is_active ? "outline" : "default"} onClick={() => mutate({ action: "toggleProduct", id: product.id, value: !product.is_active })}>{product.is_active ? "Active on store" : "Hidden"}</Button>
-          <Button size="icon" variant="ghost" aria-label="Delete product" disabled={busy} onClick={() => { if (confirm(`Delete ${product.name} and all its pack sizes?`)) mutate({ action: "deleteProduct", id: product.id }); }}><Trash2 /></Button>
-        </div>
-      </div>
-      <div className="mt-5 grid gap-3 lg:grid-cols-3">
-        {product.product_variants.map((variant) => <VariantEditor key={variant.id} variant={variant} mutate={mutate} busy={busy} />)}
-        <AddVariantForm productId={product.id} mutate={mutate} busy={busy} />
-      </div>
-    </section>)}
+    {products.map((product) => <ProductCard key={product.id} product={product} mutate={mutate} busy={busy} />)}
     <Empty show={!products.length} label="No products yet — add your first product above" />
   </div>;
 }
