@@ -20,7 +20,7 @@ const SOCIALS = [
 
 export function Footer({ logoUrl }: { logoUrl?: string | null }) {
   return (
-    <footer className="border-t-2 border-gold/40 bg-gradient-to-b from-brown via-brown to-[oklch(0.24_0.045_50)] text-cream">
+    <footer className="border-t-2 border-gold/40 bg-gradient-to-b from-brown via-brown to-[oklch(0.24_0.055_163)] text-cream">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-4">
         <div className="min-w-0 lg:col-span-2">
           <div className="flex min-w-0 items-center gap-2.5">
