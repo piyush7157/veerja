@@ -116,13 +116,14 @@ function ProductCard({ product }: { product: CatalogProduct }) {
 
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-warm transition-shadow hover:shadow-warm-lg">
-      <div className="relative overflow-hidden bg-beige">
+      <div className="relative overflow-hidden bg-beige p-3">
         <img
           src={image}
           alt={product.name}
           loading="lazy"
-          className="h-56 w-full object-cover transition-transform duration-700 hover:scale-105"
+          className="mx-auto h-56 w-full object-contain transition-transform duration-700 hover:scale-105"
         />
+
         {discount > 0 && (
           <span className="absolute top-3 left-3 rounded-full bg-leaf px-2.5 py-1 text-xs font-semibold text-accent-foreground">
             {discount}% off
