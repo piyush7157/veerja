@@ -25,13 +25,15 @@ export function Footer({ logoUrl }: { logoUrl?: string | null }) {
         <div className="min-w-0 lg:col-span-2">
           <div className="flex min-w-0 items-center gap-2.5">
             {logoUrl ? (
-              <img src={logoUrl} alt="Veerja Eats logo" className="h-11 w-11 shrink-0 rounded-full object-cover" />
+              <img src={logoUrl} alt="Veerja Eats" className="h-12 w-auto max-w-52 rounded bg-cream object-contain px-2 py-1" />
             ) : (
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-gold to-gold-deep font-semibold text-brown">
-                वी
-              </span>
+              <>
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-gold to-gold-deep font-semibold text-brown">
+                  वी
+                </span>
+                <span className="font-display text-2xl font-semibold text-cream">Veerja Eats</span>
+              </>
             )}
-            <span className="font-display text-2xl font-semibold text-cream">Veerja Eats</span>
           </div>
 
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-cream/70">

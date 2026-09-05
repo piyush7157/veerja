@@ -41,21 +41,22 @@ export function Header({ logoUrl }: { logoUrl?: string | null }) {
       <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 sm:px-6 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:py-4">
         <a href="#home" className="flex min-w-0 items-center gap-2.5">
           {logoUrl ? (
-            <img src={logoUrl} alt="Veerja Eats logo" className="h-11 w-11 shrink-0 rounded-full object-cover shadow-warm" />
+            <img src={logoUrl} alt="Veerja Eats" className="h-11 w-auto max-w-44 object-contain" />
           ) : (
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-gold to-gold-deep text-base font-semibold text-primary-foreground shadow-warm">
-              वी
-            </span>
+            <>
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-gold to-gold-deep text-base font-semibold text-primary-foreground shadow-warm">
+                वी
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate font-display text-xl leading-none font-semibold tracking-tight text-brown">
+                  Veerja Eats
+                </span>
+                <span className="block text-[10px] tracking-[0.28em] text-muted-foreground uppercase">
+                  A2 Cow Ghee
+                </span>
+              </span>
+            </>
           )}
-
-          <span className="min-w-0">
-            <span className="block truncate font-display text-xl leading-none font-semibold tracking-tight text-brown">
-              Veerja Eats
-            </span>
-            <span className="block text-[10px] tracking-[0.28em] text-muted-foreground uppercase">
-              A2 Cow Ghee
-            </span>
-          </span>
         </a>
 
         <nav className="hidden justify-center gap-6 lg:flex">
