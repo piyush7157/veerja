@@ -15,7 +15,6 @@ export const Route = createFileRoute("/api/public/product-image")({
           .from("products")
           .select("id")
           .eq("image_url", imageUrl)
-          .eq("is_active", true)
           .maybeSingle();
 
         if (!product) return new Response("Image not found", { status: 404 });
