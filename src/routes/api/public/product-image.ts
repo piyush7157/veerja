@@ -11,13 +11,15 @@ export const Route = createFileRoute("/api/public/product-image")({
 
         const imageUrl = `/api/public/product-image?path=${encodeURIComponent(path)}`;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data: product } = await supabaseAdmin
-          .from("products")
-          .select("id")
-          .eq("image_url", imageUrl)
-          .maybeSingle();
+        const [product, gallery, category] = await Promise.all([
+          supabaseAdmin.from("products").select("id").eq("image_url", imageUrl).maybeSingle(),
+          supabaseAdmin.from("product_images").select("id").eq("image_url", imageUrl).maybeSingle(),
+          supabaseAdmin.from("categories").select("id").eq("image_url", imageUrl).maybeSingle(),
+        ]);
 
-        if (!product) return new Response("Image not found", { status: 404 });
+        if (!product.data && !gallery.data && !category.data) {
+          return new Response("Image not found", { status: 404 });
+        }
 
         const { data, error } = await supabaseAdmin.storage.from("product-images").download(path);
         if (error || !data) return new Response("Image not found", { status: 404 });
