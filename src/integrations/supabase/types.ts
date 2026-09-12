@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      categories: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          image_url: string | null
+          is_published: boolean
+          name: string
+          seo_description: string
+          seo_title: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          is_published?: boolean
+          name: string
+          seo_description?: string
+          seo_title?: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          is_published?: boolean
+          name?: string
+          seo_description?: string
+          seo_title?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customer_messages: {
         Row: {
           created_at: string
@@ -183,6 +225,47 @@ export type Database = {
           },
         ]
       }
+      product_images: {
+        Row: {
+          alt_text: string
+          created_at: string
+          id: string
+          image_url: string
+          is_primary: boolean
+          product_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          alt_text?: string
+          created_at?: string
+          id?: string
+          image_url: string
+          is_primary?: boolean
+          product_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          alt_text?: string
+          created_at?: string
+          id?: string
+          image_url?: string
+          is_primary?: boolean
+          product_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_images_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_variants: {
         Row: {
           created_at: string
@@ -235,39 +318,83 @@ export type Database = {
       }
       products: {
         Row: {
+          category_id: string | null
           created_at: string
           description: string
           id: string
           image_url: string | null
           is_active: boolean
+          is_bestseller: boolean
+          is_featured: boolean
+          is_new_arrival: boolean
           name: string
+          seo_description: string
+          seo_keywords: string
+          seo_title: string
+          short_description: string
           short_name: string
+          sku: string
           slug: string
+          sort_order: number
+          tags: string[]
           updated_at: string
+          weight: string
         }
         Insert: {
+          category_id?: string | null
           created_at?: string
           description?: string
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_bestseller?: boolean
+          is_featured?: boolean
+          is_new_arrival?: boolean
           name: string
+          seo_description?: string
+          seo_keywords?: string
+          seo_title?: string
+          short_description?: string
           short_name: string
+          sku?: string
           slug: string
+          sort_order?: number
+          tags?: string[]
           updated_at?: string
+          weight?: string
         }
         Update: {
+          category_id?: string | null
           created_at?: string
           description?: string
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_bestseller?: boolean
+          is_featured?: boolean
+          is_new_arrival?: boolean
           name?: string
+          seo_description?: string
+          seo_keywords?: string
+          seo_title?: string
+          short_description?: string
           short_name?: string
+          sku?: string
           slug?: string
+          sort_order?: number
+          tags?: string[]
           updated_at?: string
+          weight?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reels: {
         Row: {
