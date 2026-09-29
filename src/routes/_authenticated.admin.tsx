@@ -167,8 +167,8 @@ function EditProductForm({ product, mutate, busy, onDone }: { product: AdminData
       slug: slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
       description: description.trim(), imageUrl: imageUrl.trim(), active,
       sku: product.sku ?? "", categoryId: product.category_id ?? null, shortDescription: product.short_description ?? "",
-      weight: product.weight ?? "", tags: product.tags ?? [], featured: !!product.featured, bestseller: !!product.bestseller,
-      newArrival: !!product.new_arrival, seoTitle: product.seo_title ?? "", seoDescription: product.seo_description ?? "",
+      weight: product.weight ?? "", tags: product.tags ?? [], featured: product.is_featured, bestseller: product.is_bestseller,
+      newArrival: product.is_new_arrival, seoTitle: product.seo_title ?? "", seoDescription: product.seo_description ?? "",
       seoKeywords: product.seo_keywords ?? "",
     });
     onDone();
