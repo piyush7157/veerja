@@ -166,6 +166,10 @@ function EditProductForm({ product, mutate, busy, onDone }: { product: AdminData
       action: "editProduct", id: product.id, name: name.trim(), shortName: (shortName || name).trim(),
       slug: slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
       description: description.trim(), imageUrl: imageUrl.trim(), active,
+      sku: product.sku ?? "", categoryId: product.category_id ?? null, shortDescription: product.short_description ?? "",
+      weight: product.weight ?? "", tags: product.tags ?? [], featured: product.is_featured, bestseller: product.is_bestseller,
+      newArrival: product.is_new_arrival, seoTitle: product.seo_title ?? "", seoDescription: product.seo_description ?? "",
+      seoKeywords: product.seo_keywords ?? "",
     });
     onDone();
   };
@@ -227,6 +231,8 @@ function AddProductForm({ mutate, busy, onDone }: { mutate: (data: MutationPaylo
       action: "addProduct", name: name.trim(), shortName: (shortName || name).trim(),
       slug: (slug || name).trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
       description: description.trim(), imageUrl: imageUrl.trim(), active,
+      sku: "", categoryId: null, shortDescription: "", weight: "", tags: [], featured: false, bestseller: false,
+      newArrival: false, seoTitle: "", seoDescription: "", seoKeywords: "",
       variants: variants.map((variant) => ({ label: variant.label.trim(), sku: variant.sku.trim(), mrp: Number(variant.mrp) || 0, discount: Number(variant.discount) || 0, stock: Number(variant.stock) || 0 })),
     });
     onDone();
